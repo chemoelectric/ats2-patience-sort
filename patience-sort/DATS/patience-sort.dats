@@ -55,61 +55,6 @@ next_power_of_two
         @(EXP2 (n, k) | g1uint (tk, k))
 
 (* ================================================================ *)
-(* FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME  Helper routines *)
-
-fn {tk : tkind}
-ceildiv {x, y : int | y != 0}
-        (x    : g1uint (tk, x),
-         y    : g1uint (tk, y))
-    :<> [z : int | ifintrel (nmod_int_int (x, y) == 0,
-                             ndiv_int_int (x, y),
-                             ndiv_int_int (x, y) + 1,
-                             z)]
-        g1uint (tk, z) =
-  let
-    prval () = lemma_g1uint_param x
-    prval () = lemma_g1uint_param y
-    val q = g1uint_div (x, y)
-    and [r : int] r = g1uint_mod (x, y)
-    prval () = $UNSAFE.prop_assert {r == nmod_int_int (x, y)} ()
-  in
-    if r = g1u2u 0u then
-      q
-    else
-      succ q
-  end
-
-fn {tk : tkind}
-winners_tree_sizes
-          {num_piles : pos}
-          (num_piles : g1uint (tk, num_piles))
-    :<> [num_rounds   : pos]
-        [bracket_size : pos]
-        @(g1uint (tk, num_rounds),
-          g1uint (tk, bracket_size)) =
-  let
-    fun
-    loop {npiles  : pos}
-         {nrounds : nat}
-         {bracksz : nat}
-         .<npiles>.
-         (npiles  : g1uint (tk, npiles),
-          nrounds : g1uint (tk, nrounds),
-          bracksz : g1uint (tk, bracksz))
-        :<> [num_rounds   : pos]
-            [bracket_size : pos]
-            @(g1uint (tk, num_rounds),
-              g1uint (tk, bracket_size)) =
-      if npiles = g1u2u 1u then
-        @(succ nrounds, succ bracksz)
-      else
-        loop (ceildiv (npiles, g1u2u 2u),
-              succ nrounds, bracksz + npiles)
-  in
-    loop (num_piles, g1u2u 0u, g1u2u 0u)
-  end
-
-(* ================================================================ *)
 (*
 
   In the following implementation of next_power_of_two:
