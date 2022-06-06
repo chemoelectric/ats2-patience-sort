@@ -85,11 +85,6 @@ PKG_INSTALLDIR
 #
 # Checks for typedefs, structures, and compiler characteristics.
 
-# AX_CHECK_ALIGNED_ACCESS_REQUIRED
-
-# AC_C_BIGENDIAN(,,,
-#   [AC_MSG_ERROR([Universal binary files are not yet supported.])])
-
 #--------------------------------------------------------------------------
 #
 # Checks for library functions.
@@ -107,25 +102,10 @@ AC_SUBST([GNU],[])
 StM_REQUIRE_GNU_MAKE_IN_PATH
 StM_CONFIG_MAKEFILES
 
-# AC_CONFIG_FILES(
-#   [tests/SpookyV2.h:reference-implementation/SpookyV2.h
-#    tests/SpookyV2.cpp:reference-implementation/SpookyV2.cpp])
-
 # AC_CONFIG_FILES([ats2-patience-sort.pc])
 # AC_CONFIG_FILES([patience-sort.pc])
 
 AC_CONFIG_FILES([list-ats-dependencies.dats])
-
-# AC_ARG_VAR([POSIX_SH],[The full absolute path of a POSIX shell])
-# POSIX_SH=${POSIX_SH-`command -p -v sh`}
-# AC_CONFIG_FILES([tests/compute-reference-for-seeds-eq-zero.sh],
-#                 [chmod +x tests/compute-reference-for-seeds-eq-zero.sh])
-# AC_CONFIG_FILES([tests/compute-reference-for-hash128-seed.sh],
-#                 [chmod +x tests/compute-reference-for-hash128-seed.sh])
-# AC_CONFIG_FILES([tests/compute-reference-for-hash64-seed.sh],
-#                 [chmod +x tests/compute-reference-for-hash64-seed.sh])
-# AC_CONFIG_FILES([tests/compute-reference-for-hash32-seed.sh],
-#                 [chmod +x tests/compute-reference-for-hash32-seed.sh])
 
 AC_OUTPUT
 

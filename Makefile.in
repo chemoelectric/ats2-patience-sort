@@ -33,7 +33,7 @@
 #
 
 # aminclude_static.am generated automatically by Autoconf
-# from AX_AM_MACROS_STATIC on Mon Jun  6 07:52:12 CDT 2022
+# from AX_AM_MACROS_STATIC on Mon Jun  6 09:22:52 CDT 2022
 
 
 
@@ -172,7 +172,9 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 libats2_patience_sort_la_LIBADD =
 am__dirstamp = $(am__leading_dot)dirstamp
 am__objects_1 = patience-sort/SATS/patience-sort_sats.lo
-nodist_libats2_patience_sort_la_OBJECTS = $(am__objects_1)
+am__objects_2 = patience-sort/DATS/patience-sort_dats.lo
+nodist_libats2_patience_sort_la_OBJECTS = $(am__objects_1) \
+	$(am__objects_2)
 libats2_patience_sort_la_OBJECTS =  \
 	$(nodist_libats2_patience_sort_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -198,6 +200,7 @@ DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/build-aux/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/list_ats_dependencies-list-ats-dependencies_depsprog.Po \
+	patience-sort/DATS/$(DEPDIR)/patience-sort_dats.Plo \
 	patience-sort/SATS/$(DEPDIR)/patience-sort_sats.Plo
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
@@ -442,10 +445,11 @@ AUTOMAKE_OPTIONS = foreign subdir-objects -Wno-portability
 @CODE_COVERAGE_ENABLED_TRUE@code_coverage_sanitize = $(subst -,_,$(subst .,_,$(1)))
 @CODE_COVERAGE_ENABLED_TRUE@AM_DISTCHECK_CONFIGURE_FLAGS := $(AM_DISTCHECK_CONFIGURE_FLAGS) --disable-code-coverage
 EXTRA_DIST = $(srcdir)/silent-rules.mk COPYING INSTALL README AUTHORS \
-	$(PATIENCE-SORT_SATS) list-ats-dependencies.dats
+	$(PATIENCE-SORT_SATS) $(PATIENCE-SORT_DATS) \
+	list-ats-dependencies.dats
 MOSTLYCLEANFILES = 
-CLEANFILES = $(PATIENCE-SORT_SATS_C) list-ats-dependencies \
-	list-ats-dependencies_depsprog.c
+CLEANFILES = $(PATIENCE-SORT_SATS_C) $(PATIENCE-SORT_DATS_C) \
+	list-ats-dependencies list-ats-dependencies_depsprog.c
 DISTCLEANFILES = Makefile GNUmakefile
 BUILT_SOURCES = 
 AM_CPPFLAGS = -I$(builddir) -I$(srcdir) -I$(PATSHOME) \
@@ -477,27 +481,16 @@ escape = $(subst $$,\$$,$(subst ^,\^,$(subst ],\],$(subst [,\[,$(subst .,\.,$(su
 
 #--------------------------------------------------------------------------
 PATSOPT_DEPS = 
-
-# DATS_WORDS_BIGENDIAN := \
-# 	$(shell echo x $(DEFS) | \
-# 		$(EGREP) -q '[[:space:]]-DWORDS_BIGENDIAN(=1)?([[:space:]]|$$)?' && \
-# 				echo x'-DATS WORDS_BIGENDIAN=1' | \
-# 		$(SED) -e 's|^x||')
-
-# DATS_HAVE_ALIGNED_ACCESS_REQUIRED := \
-# 	$(shell echo x $(DEFS) | \
-# 		$(EGREP) -q '[[:space:]]-DHAVE_ALIGNED_ACCESS_REQUIRED(=1)?([[:space:]]|$$)?' && \
-# 				echo x'-DATS HAVE_ALIGNED_ACCESS_REQUIRED=1' | \
-# 		$(SED) -e 's|^x||')
-# AM_PATSOPTFLAGS += $(DATS_WORDS_BIGENDIAN)
-# AM_PATSOPTFLAGS += $(DATS_HAVE_ALIGNED_ACCESS_REQUIRED)
 AM_PATSOPTFLAGS = -IATS $(builddir) -IATS $(srcdir)
 TOTAL_PATSOPTFLAGS = $(AM_PATSOPTFLAGS) $(PATSOPTFLAGS) \
 	$(XPATSOPTFLAGS)
 TESTS_PATSOPTFLAGS = -IATS $(builddir)/tests -IATS $(srcdir)/tests
 PATIENCE_SORT_SATS = patience-sort/SATS/patience-sort.sats
 PATIENCE_SORT_SATS_C = patience-sort/SATS/patience-sort_sats.c
-nodist_libats2_patience_sort_la_SOURCES = $(PATIENCE_SORT_SATS_C)
+PATIENCE_SORT_DATS = patience-sort/DATS/patience-sort.sats
+PATIENCE_SORT_DATS_C = patience-sort/DATS/patience-sort_dats.c
+nodist_libats2_patience_sort_la_SOURCES = $(PATIENCE_SORT_SATS_C) \
+	$(PATIENCE_SORT_DATS_C)
 nodist_list_ats_dependencies_SOURCES =  \
 	list-ats-dependencies_depsprog.c
 list_ats_dependencies_CPPFLAGS = $(AM_CPPFLAGS) -DATS_MEMALLOC_LIBC
@@ -638,6 +631,15 @@ patience-sort/SATS/$(DEPDIR)/$(am__dirstamp):
 patience-sort/SATS/patience-sort_sats.lo:  \
 	patience-sort/SATS/$(am__dirstamp) \
 	patience-sort/SATS/$(DEPDIR)/$(am__dirstamp)
+patience-sort/DATS/$(am__dirstamp):
+	@$(MKDIR_P) patience-sort/DATS
+	@: > patience-sort/DATS/$(am__dirstamp)
+patience-sort/DATS/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) patience-sort/DATS/$(DEPDIR)
+	@: > patience-sort/DATS/$(DEPDIR)/$(am__dirstamp)
+patience-sort/DATS/patience-sort_dats.lo:  \
+	patience-sort/DATS/$(am__dirstamp) \
+	patience-sort/DATS/$(DEPDIR)/$(am__dirstamp)
 
 libats2-patience-sort.la: $(libats2_patience_sort_la_OBJECTS) $(libats2_patience_sort_la_DEPENDENCIES) $(EXTRA_libats2_patience_sort_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(LINK) -rpath $(libdir) $(libats2_patience_sort_la_OBJECTS) $(libats2_patience_sort_la_LIBADD) $(LIBS)
@@ -648,6 +650,8 @@ list-ats-dependencies$(EXEEXT): $(list_ats_dependencies_OBJECTS) $(list_ats_depe
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f patience-sort/DATS/*.$(OBJEXT)
+	-rm -f patience-sort/DATS/*.lo
 	-rm -f patience-sort/SATS/*.$(OBJEXT)
 	-rm -f patience-sort/SATS/*.lo
 
@@ -655,6 +659,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/list_ats_dependencies-list-ats-dependencies_depsprog.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@patience-sort/DATS/$(DEPDIR)/patience-sort_dats.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@patience-sort/SATS/$(DEPDIR)/patience-sort_sats.Plo@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
@@ -706,6 +711,7 @@ mostlyclean-libtool:
 
 clean-libtool:
 	-rm -rf .libs _libs
+	-rm -rf patience-sort/DATS/.libs patience-sort/DATS/_libs
 	-rm -rf patience-sort/SATS/.libs patience-sort/SATS/_libs
 
 distclean-libtool:
@@ -1028,6 +1034,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-rm -f patience-sort/DATS/$(DEPDIR)/$(am__dirstamp)
+	-rm -f patience-sort/DATS/$(am__dirstamp)
 	-rm -f patience-sort/SATS/$(DEPDIR)/$(am__dirstamp)
 	-rm -f patience-sort/SATS/$(am__dirstamp)
 	-test -z "$(DISTCLEANFILES)" || rm -f $(DISTCLEANFILES)
@@ -1044,6 +1052,7 @@ clean-am: clean-binPROGRAMS clean-generic clean-libLTLIBRARIES \
 distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 		-rm -f ./$(DEPDIR)/list_ats_dependencies-list-ats-dependencies_depsprog.Po
+	-rm -f patience-sort/DATS/$(DEPDIR)/patience-sort_dats.Plo
 	-rm -f patience-sort/SATS/$(DEPDIR)/patience-sort_sats.Plo
 	-rm -f GNUmakefile
 distclean-am: clean-am distclean-compile distclean-generic \
@@ -1094,6 +1103,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
 		-rm -f ./$(DEPDIR)/list_ats_dependencies-list-ats-dependencies_depsprog.Po
+	-rm -f patience-sort/DATS/$(DEPDIR)/patience-sort_dats.Plo
 	-rm -f patience-sort/SATS/$(DEPDIR)/patience-sort_sats.Plo
 	-rm -f GNUmakefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
@@ -1249,7 +1259,7 @@ code-coverage-capture-hook:
 @GNU@ include $(top_srcdir)/silent-rules.mk
 @GNU@ -include ats-dependencies/*.mk
 
-clean-local: code-coverage-clean tests-clean
+clean-local: code-coverage-clean # tests-clean
 distclean-local: code-coverage-dist-clean ats-includes-distclean
 
 @GNU@ define write-dependencies-file =
@@ -1297,14 +1307,8 @@ ats-includes-distclean:
 
 #--------------------------------------------------------------------------
 
-# nodist_pkgconfig_DATA += ats2-spookyhash.pc
-# nodist_pkgconfig_DATA += spookyhash.pc
-
-#--------------------------------------------------------------------------
-
-# EXTRA_DIST += reference-implementation/SpookyV2.cpp
-# EXTRA_DIST += reference-implementation/SpookyV2.h
-# EXTRA_DIST += reference-implementation/TestSpookyV2.cpp
+# nodist_pkgconfig_DATA += ats2-patience-sort.pc
+# nodist_pkgconfig_DATA += patience-sort.pc
 
 #--------------------------------------------------------------------------
 # local variables:
