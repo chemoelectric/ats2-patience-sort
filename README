@@ -19,7 +19,7 @@ Patience sort with a binary search for the dealing phase and a fast
 k-way merge for the merge stage performs at order n log n in the
 average and worst cases, and at order n in the best case. On paper, it
 is certainly one of the best choices for a non-parallel sorting
-algorithm.
+algorithm. Is it also a good choice, in *practice*?
 
 I know some folk at Microsoft Research did an implementation of
 patience sort that they profiled as a bit faster than a good quicksort
