@@ -209,6 +209,10 @@ deal {ifirst, len : int}
                       >> array (link_t (ifirst, len), len))
     :<!wrt> [num_piles   : int | num_piles <= len]
             size_t num_piles =
+  (*
+    Dealing is done backwards through the arr array, so an array
+    already sorted in the desired order will result in a single pile.
+  *)
   let
     prval () = lemma_g1uint_param ifirst
     prval () = lemma_g1uint_param len
@@ -221,9 +225,9 @@ deal {ifirst, len : int}
     val link_nil : link_t 0 = g1u2u 0u
 
     fun
-    loop {q         : pos | q <= len + 1}
+    loop {q         : nat | q <= len}
          {m         : nat | m <= len}
-         .<len + 1 - q>.
+         .<q>.
          (arr       : &RD(array (a, n)),
           q         : size_t q,
           piles     : &array (link_t, len) >> _,
@@ -231,7 +235,7 @@ deal {ifirst, len : int}
           m         : size_t m)
         :<!wrt> [num_piles : nat | num_piles <= len]
                 size_t num_piles =
-      if q = succ (len) then
+      if q = i2sz 0 then
         m
       else
         let
@@ -246,14 +250,14 @@ deal {ifirst, len : int}
           links[pred q] := piles[pred i];
           piles[pred i] := q;
           if i = succ m then
-            loop {q + 1} (arr, succ q, piles, links, succ m)
+            loop {q - 1} (arr, pred q, piles, links, succ m)
           else
-            loop {q + 1} (arr, succ q, piles, links, m)
+            loop {q - 1} (arr, pred q, piles, links, m)
         end
   in
     array_initize_elt<link_t> (piles, len, link_nil);
     array_initize_elt<link_t> (links, len, link_nil);
-    loop (arr, one, piles, links, zero)
+    loop (arr, len, piles, links, zero)
   end
 
 fn {a : t@ype}
