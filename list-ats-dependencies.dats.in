@@ -266,6 +266,36 @@ trim_past_start {p : addr} {n : nat}
   end
 
 fn
+trim_past_loadname {p : addr} {n : nat}
+                   (s : !strnptr (p, n) >> _) :
+    Strnptr1 =
+  (* For simplicity, accept "FOO =" and practically anything else
+     ending in a "=", before "staload", "dynload", or "#include" *)
+  if strncmp ($UNSAFE.castvwtp1 s, "\"", i2sz 1) = 0 ||
+     strncmp ($UNSAFE.castvwtp1 s, "<", i2sz 1) = 0 then
+    strnptr_copy s
+  else
+    let
+      val n : size_t n = g1i2u (length s)
+      fun
+      loop {i : nat | i <= n} .<n - i>.
+           (s : !strnptr (p, n) >> _,
+            i : size_t i) :
+          [j : nat | j <= n] size_t j =
+        if i = n then
+          i
+        else if strnptr_get_at (s, i) <> '=' then
+          loop (s, succ i)
+        else
+          succ i
+      val i = loop (s, i2sz 0)
+      val s = string_make_substring ($UNSAFE.castvwtp1{string n} s,
+                                     i, n - i)
+    in
+      replace (s, trim_leading_space (s))
+    end
+
+fn
 trim_past_quote {p : addr} {n : nat}
                 (s : !strnptr (p, n) >> _) :
     Strnptr1 =
@@ -355,6 +385,7 @@ find_depends_fileref (f) =
                   is_include ($UNSAFE.castvwtp1 s)) then
                 let
                   val s = replace (s, trim_past_start (s))
+                  val s = replace (s, trim_past_loadname (s))
                   val s = replace (s, trim_past_quote (s))
                   val s = replace (s, take_until_quote (s))
                   val _ = assertloc (i2ssz 0 <= length s)
