@@ -48,17 +48,13 @@ local
 
 in
 
-  fn {a : vt@ype}
+  fn {a  : vt@ype}
   patience_sort_given_workspace
             {ifirst, len : int | 0 <= ifirst}
             {n           : int | ifirst + len <= n}
             {power       : int | len <= power}
             {n_workspace : int | (2 * len) + (4 * power)
                                     <= n_workspace}
-            (* {n_piles  : int | len <= n_piles} *)
-            (* {n_links  : int | len <= n_links} *)
-            (* {n_winv   : int | 2 * power <= n_winv} *)
-            (* {n_winl   : int | 2 * power <= n_winl} *)
             (pf_exp2     : [exponent : nat] EXP2 (exponent, power) |
              arr         : &RD(array (a, n)),
              ifirst      : size_t ifirst,
@@ -66,10 +62,6 @@ in
              power       : size_t power,
              workspace   : &array (link_t (ifirst, len)?,
                                    n_workspace) >> _,
-             (* piles    : &array (link_t (ifirst, len)?, n_piles) >> _, *)
-             (* links    : &array (link_t (ifirst, len)?, n_links) >> _, *)
-             (* winvals  : &array (link_t (ifirst, len)?, n_winv) >> _, *)
-             (* winlinks : &array (link_t (ifirst, len)?, n_winl) >> _, *)
              sorted      : &array (index_t (ifirst, len)?, len)
                               >> array (index_t (ifirst, len), len))
       :<!wrt> void
