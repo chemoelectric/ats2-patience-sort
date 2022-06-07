@@ -36,8 +36,8 @@ typedef patience_sort_link_t (ifirst : int, len : int) =
   [i : int] patience_sort_link_t (ifirst, len, i)
 
 (* patience_sort$lt : the order predicate for patience sort. *)
-fn {a : t@ype}
-patience_sort$lt (x : a, y : a) :<> bool
+fn {a : vt@ype}
+patience_sort$lt (x : &RD(a), y : &RD(a)) :<> bool
 
 local
 
@@ -48,7 +48,7 @@ local
 
 in
 
-  fn {a : t@ype}
+  fn {a : vt@ype}
   patience_sort_given_workspaces
             {ifirst, len : int | 0 <= ifirst}
             {n        : int | ifirst + len <= n}
@@ -70,7 +70,7 @@ in
                           >> array (index_t (ifirst, len), len))
       :<!wrt> void
 
-  fn {a : t@ype}
+  fn {a : vt@ype}
   patience_sort_with_its_own_workspaces
             {ifirst, len : int | 0 <= ifirst}
             {n        : int | ifirst + len <= n}

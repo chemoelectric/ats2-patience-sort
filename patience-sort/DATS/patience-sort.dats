@@ -39,8 +39,21 @@ typedef link_t (ifirst : int, len : int, i : int) =
 typedef link_t (ifirst : int, len : int) =
   patience_sort_link_t (ifirst, len)
 
-extern praxi {a : vt@ype}
+extern praxi
+array_v_takeout_two
+          {a     : vt@ype}
+          {p     : addr}
+          {n     : int}
+          {i, j  : nat | i < n; j < n; i != j}
+          (pfarr : array_v (a, p, n))
+    :<prf> @(a @ (p + (i * sizeof a)),
+             a @ (p + (j * sizeof a)),
+             (a @ (p + (i * sizeof a)),
+              a @ (p + (j * sizeof a))) -<prf> array_v (a, p, n))
+
+extern praxi
 array_uninitize_without_doing_anything
+          {a : vt@ype}
           {n   : int}
           (arr : &array (INV(a), n) >> array (a?, n),
            asz : size_t n)
@@ -111,7 +124,7 @@ next_power_of_two {i} (i) =
 (* ================================================================ *)
 (* The patience sort.                                               *)
 
-fn {a : t@ype}
+fn {a : vt@ype}
 find_pile {ifirst, len : int}
           {n           : int | ifirst + len <= n}
           {num_piles   : nat | num_piles <= len}
@@ -162,13 +175,27 @@ find_pile {ifirst, len : int}
               succ j
             else
               let
-                val piles_j = piles[j]
+                val [piles_j : int] piles_j = piles[j]
                 val () = $effmask_exn assertloc (piles_j <> g1u2u 0u)
 
-                val x1 = arr[pred q + ifirst]
-                and x2 = arr[pred piles_j + ifirst]
+                stadef i1 = (q - 1) + ifirst
+                stadef i2 = (piles_j - 1) + ifirst
+                val i1 = pred q + ifirst
+                and i2 = pred piles_j + ifirst
+
+                val () = $effmask_exn assertloc (i1 <> i2)
+
+                prval @(pfelem1, pfelem2, fpf) =
+                  array_v_takeout_two
+                    {a} {..} {n} {i1, i2} (view@ arr)
+
+                val x2_lt_x1 =
+                  (!(ptr_add<a> (addr@ arr, i2)))
+                    \lt (!(ptr_add<a> (addr@ arr, i1)))
+
+                prval () = view@ arr := fpf (pfelem1, pfelem2)
               in
-                if x2 \lt x1 then
+                if x2_lt_x1 then
                   succ (succ j)
                 else
                   succ j
@@ -182,13 +209,26 @@ find_pile {ifirst, len : int}
             stadef i = j + ((k - j) / 2)
             val i : size_t i = j + half (k - j)
 
-            val piles_j = piles[j]
+            val [piles_j : int] piles_j = piles[j]
             val () = $effmask_exn assertloc (piles_j <> g1u2u 0u)
 
-            val x1 = arr[pred q + ifirst]
-            and x2 = arr[pred piles_j + ifirst]
+            stadef i1 = (q - 1) + ifirst
+            stadef i2 = (piles_j - 1) + ifirst
+            val i1 = pred q + ifirst
+            and i2 = pred piles_j + ifirst
+
+            val () = $effmask_exn assertloc (i1 <> i2)
+
+            prval @(pfelem1, pfelem2, fpf) =
+              array_v_takeout_two {a} {..} {n} {i1, i2} (view@ arr)
+
+            val x2_lt_x1 =
+              (!(ptr_add<a> (addr@ arr, i2)))
+                \lt (!(ptr_add<a> (addr@ arr, i1)))
+
+            prval () = view@ arr := fpf (pfelem1, pfelem2)
           in
-            if x2 \lt x1 then
+            if x2_lt_x1 then
               loop (arr, piles, i + 1, k)
             else
               loop (arr, piles, j, i)
@@ -197,7 +237,7 @@ find_pile {ifirst, len : int}
       loop (arr, piles, g1u2u 0u, pred num_piles)
     end
 
-fn {a : t@ype}
+fn {a : vt@ype}
 deal {ifirst, len : int}
      {n           : int | ifirst + len <= n}
      (ifirst      : size_t ifirst,
@@ -260,7 +300,7 @@ deal {ifirst, len : int}
     loop (arr, len, piles, links, zero)
   end
 
-fn {a : t@ype}
+fn {a : vt@ype}
 k_way_merge {ifirst, len : int}
             {n           : int | ifirst + len <= n}
             {num_piles   : pos | num_piles <= len}
@@ -434,8 +474,8 @@ k_way_merge {ifirst, len : int}
           end
 
         val j = find_opponent i
-        val winner_i = winvals[i]
-        and winner_j = winvals[j]
+        val [winner_i : int] winner_i = winvals[i]
+        and [winner_j : int] winner_j = winvals[j]
       in
         if winner_i = link_nil then
           j
@@ -443,12 +483,25 @@ k_way_merge {ifirst, len : int}
           i
         else
           let
+            stadef i1 = (winner_i - 1) + ifirst
+            stadef i2 = (winner_j - 1) + ifirst
             val i1 = pred winner_i + ifirst
             and i2 = pred winner_j + ifirst
             prval () = lemma_g1uint_param i1
             prval () = lemma_g1uint_param i2
+
+            val () = $effmask_exn assertloc (i1 <> i2)
+
+            prval @(pfelem1, pfelem2, fpf) =
+              array_v_takeout_two {a} {..} {n} {i1, i2} (view@ arr)
+
+            val x2_lt_x1 =
+              (!(ptr_add<a> (addr@ arr, i2)))
+                \lt (!(ptr_add<a> (addr@ arr, i1)))
+
+            prval () = view@ arr := fpf (pfelem1, pfelem2)
           in
-            if arr[i2] \lt arr[i1] then j else i
+            if x2_lt_x1 then j else i
           end
       end
 
@@ -566,10 +619,10 @@ k_way_merge {ifirst, len : int}
                     addr@ sorted, i2sz 0)
 
     prval () =
-      array_uninitize_without_doing_anything<link_t>
+      array_uninitize_without_doing_anything
         (winvals, winners_size)
     prval () =
-      array_uninitize_without_doing_anything<link_t>
+      array_uninitize_without_doing_anything
         (winlinks, winners_size)
     prval () = view@ winvals :=
       array_v_unsplit (view@ winvals, winvals_right)
@@ -630,10 +683,10 @@ patience_sort_given_workspaces
                                  sorted)
 
         prval () =
-          array_uninitize_without_doing_anything<link_t>
+          array_uninitize_without_doing_anything
             (piles, len)
         prval () =
-          array_uninitize_without_doing_anything<link_t>
+          array_uninitize_without_doing_anything
             (links, len)
 
         prval () = view@ piles :=
