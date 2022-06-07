@@ -27,17 +27,17 @@ staload "patience-sort/SATS/patience-sort.sats"
 
 stadef index_t (ifirst : int, len : int, i : int) =
   patience_sort_index_t (ifirst, len, i)
-typedef index_t (ifirst : int, len : int, i : int) =
-  patience_sort_index_t (ifirst, len, i)
-typedef index_t (ifirst : int, len : int) =
-  patience_sort_index_t (ifirst, len)
+typedef index_t (tk : tkind, ifirst : int, len : int, i : int) =
+  patience_sort_index_t (tk, ifirst, len, i)
+typedef index_t (tk : tkind, ifirst : int, len : int) =
+  patience_sort_index_t (tk, ifirst, len)
 
 stadef link_t (ifirst : int, len : int, i : int) =
   patience_sort_link_t (ifirst, len, i)
-typedef link_t (ifirst : int, len : int, i : int) =
-  patience_sort_link_t (ifirst, len, i)
-typedef link_t (ifirst : int, len : int) =
-  patience_sort_link_t (ifirst, len)
+typedef link_t (tk : tkind, ifirst : int, len : int, i : int) =
+  patience_sort_link_t (tk, ifirst, len, i)
+typedef link_t (tk : tkind, ifirst : int, len : int) =
+  patience_sort_link_t (tk, ifirst, len)
 
 extern praxi
 array_v_takeout_two
@@ -49,15 +49,8 @@ array_v_takeout_two
     :<prf> @(a @ (p + (i * sizeof a)),
              a @ (p + (j * sizeof a)),
              (a @ (p + (i * sizeof a)),
-              a @ (p + (j * sizeof a))) -<lin,prf> array_v (a, p, n))
-
-extern praxi
-array_uninitize_without_doing_anything
-          {a   : vt@ype}
-          {n   : int}
-          (arr : &array (INV(a), n) >> array (a?, n),
-           asz : size_t n)
-    :<prf> void
+              a @ (p + (j * sizeof a))) -<lin,prf>
+  array_v (a, p, n))
 
 extern praxi
 array_v_uninitize_without_doing_anything
@@ -132,19 +125,21 @@ next_power_of_two {i} (i) =
 (* ================================================================ *)
 (* The patience sort.                                               *)
 
-fn {a : vt@ype}
+fn {a  : vt@ype}
+   {tk : tkind}
 find_pile {ifirst, len : int}
           {n           : int | ifirst + len <= n}
           {num_piles   : nat | num_piles <= len}
           {n_piles     : int | len <= n_piles}
           {q           : pos | q <= len}
-          (ifirst      : size_t ifirst,
+          (ifirst      : g1uint (tk, ifirst),
            arr         : &RD(array (a, n)),
-           num_piles   : size_t num_piles,
-           piles       : &RD(array (link_t (ifirst, len), n_piles)),
-           q           : size_t q)
+           num_piles   : g1uint (tk, num_piles),
+           piles       : &RD(array (link_t (tk, ifirst, len),
+                                    n_piles)),
+           q           : g1uint (tk, q))
     :<> [i : pos | i <= num_piles + 1]
-        size_t i =
+        g1uint (tk, i) =
   (*
     Bottenbruch search for the leftmost pile whose top is greater than
     or equal to the next value dealt by "deal".
@@ -159,8 +154,8 @@ find_pile {ifirst, len : int}
 
       * https://en.wikipedia.org/w/index.php?title=Binary_search_algorithm&oldid=1062988272#Alternative_procedure
   *)
-  if num_piles = i2sz 0 then
-    i2sz 1
+  if num_piles = g1u2u 0u then
+    g1u2u 1u
   else
     let
       macdef lt = patience_sort$lt<a>
@@ -172,11 +167,11 @@ find_pile {ifirst, len : int}
       loop {j, k  : nat | j <= k; k < num_piles}
            .<k - j>.
            (arr   : &RD(array (a, n)),
-            piles : &array (link_t (ifirst, len), n_piles),
-            j     : size_t j,
-            k     : size_t k)
+            piles : &array (link_t (tk, ifirst, len), n_piles),
+            j     : g1uint (tk, j),
+            k     : g1uint (tk, k))
           :<> [i : pos | i <= num_piles + 1]
-              size_t i =
+              g1uint (tk, i) =
         if j = k then
           begin
             if succ j <> num_piles then
@@ -211,11 +206,11 @@ find_pile {ifirst, len : int}
           end
         else
           let
-            typedef index (i : int) = [0 <= i; i < n] size_t i
+            typedef index (i : int) = [0 <= i; i < n] g1uint (tk, i)
             typedef index = [i : int] index i
 
             stadef i = j + ((k - j) / 2)
-            val i : size_t i = j + half (k - j)
+            val i : g1uint (tk, i) = j + half (k - j)
 
             val [piles_j : int] piles_j = piles[j]
             val () = $effmask_exn assertloc (piles_j <> g1u2u 0u)
@@ -237,7 +232,7 @@ find_pile {ifirst, len : int}
             prval () = view@ arr := fpf (pfelem1, pfelem2)
           in
             if x2_lt_x1 then
-              loop (arr, piles, i + 1, k)
+              loop (arr, piles, succ i, k)
             else
               loop (arr, piles, j, i)
           end
@@ -245,19 +240,20 @@ find_pile {ifirst, len : int}
       loop (arr, piles, g1u2u 0u, pred num_piles)
     end
 
-fn {a : vt@ype}
+fn {a  : vt@ype}
+   {tk : tkind}
 deal_refparams
           {ifirst, len : int}
           {n           : int | ifirst + len <= n}
-          (ifirst      : size_t ifirst,
-           len         : size_t len,
+          (ifirst      : g1uint (tk, ifirst),
+           len         : g1uint (tk, len),
            arr         : &RD(array (a, n)),
-           piles       : &array (link_t (ifirst, len)?, len)
-                           >> array (link_t (ifirst, len), len),
-           links       : &array (link_t (ifirst, len)?, len)
-                           >> array (link_t (ifirst, len), len))
-    :<!wrt> [num_piles   : int | num_piles <= len]
-            size_t num_piles =
+           piles       : &array (link_t (tk, ifirst, len)?, len)
+                           >> array (link_t (tk, ifirst, len), len),
+           links       : &array (link_t (tk, ifirst, len)?, len)
+                           >> array (link_t (tk, ifirst, len), len))
+    :<!wrt> [num_piles : int | num_piles <= len]
+            g1uint (tk, num_piles) =
   (*
     Dealing is done backwards through the arr array, so an array
     already sorted in the desired order will result in a single pile.
@@ -266,11 +262,11 @@ deal_refparams
     prval () = lemma_g1uint_param ifirst
     prval () = lemma_g1uint_param len
 
-    typedef link_t (i : int) = link_t (ifirst, len, i)
-    typedef link_t = link_t (ifirst, len)
+    typedef link_t (i : int) = link_t (tk, ifirst, len, i)
+    typedef link_t = link_t (tk, ifirst, len)
 
-    val zero : size_t 0 = g1u2u 0u
-    val one : size_t 1 = g1u2u 1u
+    val zero : g1uint (tk, 0) = g1u2u 0u
+    val one : g1uint (tk, 1) = g1u2u 1u
     val link_nil : link_t 0 = g1u2u 0u
 
     fun
@@ -278,13 +274,13 @@ deal_refparams
          {m         : nat | m <= len}
          .<q>.
          (arr       : &RD(array (a, n)),
-          q         : size_t q,
+          q         : g1uint (tk, q),
           piles     : &array (link_t, len) >> _,
           links     : &array (link_t, len) >> _,
-          m         : size_t m)
+          m         : g1uint (tk, m))
         :<!wrt> [num_piles : nat | num_piles <= len]
-                size_t num_piles =
-      if q = i2sz 0 then
+                g1uint (tk, num_piles) =
+      if q = zero then
         m
       else
         let
@@ -304,39 +300,41 @@ deal_refparams
             loop {q - 1} (arr, pred q, piles, links, m)
         end
   in
-    array_initize_elt<link_t> (piles, len, link_nil);
-    array_initize_elt<link_t> (links, len, link_nil);
+    array_initize_elt<link_t> (piles, g1u2u len, link_nil);
+    array_initize_elt<link_t> (links, g1u2u len, link_nil);
     loop (arr, len, piles, links, zero)
   end
 
-fn {a : vt@ype}
+fn {a  : vt@ype}
+   {tk : tkind}
 deal_valparams
           {ifirst, len : int}
           {n           : int | ifirst + len <= n}
           {p_piles     : addr}
           {p_links     : addr}
-          (pf_piles    : !array_v (link_t (ifirst, len)?,
+          (pf_piles    : !array_v (link_t (tk, ifirst, len)?,
                                    p_piles, len)
-                            >> array_v (link_t (ifirst, len),
+                            >> array_v (link_t (tk, ifirst, len),
                                         p_piles, len),
-           pf_links    : !array_v (link_t (ifirst, len)?,
+           pf_links    : !array_v (link_t (tk, ifirst, len)?,
                                    p_links, len)
-                            >> array_v (link_t (ifirst, len),
+                            >> array_v (link_t (tk, ifirst, len),
                                         p_links, len) |
-           ifirst      : size_t ifirst,
-           len         : size_t len,
+           ifirst      : g1uint (tk, ifirst),
+           len         : g1uint (tk, len),
            arr         : &RD(array (a, n)),
            p_piles     : ptr p_piles,
            p_links     : ptr p_links)
          :<!wrt> [num_piles   : int | num_piles <= len]
-                 size_t num_piles =
-  deal_refparams<a> {ifirst, len} {n}
-                    (ifirst, len, arr, !p_piles, !p_links)
+                 g1uint (tk, num_piles) =
+  deal_refparams<a><tk>
+    {ifirst, len} {n} (ifirst, len, arr, !p_piles, !p_links)
 
 overload deal with deal_valparams
 overload deal with deal_refparams
 
-fn {a : vt@ype}
+fn {a  : vt@ype}
+   {tk : tkind}
 k_way_merge_refparams
           {ifirst, len : int}
           {n           : int | ifirst + len <= n}
@@ -344,18 +342,18 @@ k_way_merge_refparams
           {power       : int | len <= power}
           (pf_exp2     : [exponent : nat] EXP2 (exponent, power) |
            arr         : &RD(array (a, n)),
-           ifirst      : size_t ifirst,
-           len         : size_t len,
-           num_piles   : size_t num_piles,
-           power       : size_t power,
-           piles       : &array (link_t (ifirst, len), len) >> _,
-           links       : &RD(array (link_t (ifirst, len), len)),
-           winvals     : &array (link_t (ifirst, len)?, 2 * power)
+           ifirst      : g1uint (tk, ifirst),
+           len         : g1uint (tk, len),
+           num_piles   : g1uint (tk, num_piles),
+           power       : g1uint (tk, power),
+           piles       : &array (link_t (tk, ifirst, len), len) >> _,
+           links       : &RD(array (link_t (tk, ifirst, len), len)),
+           winvals     : &array (link_t (tk, ifirst, len)?, 2 * power)
                             >> _,
-           winlinks    : &array (link_t (ifirst, len)?, 2 * power)
+           winlinks    : &array (link_t (tk, ifirst, len)?, 2 * power)
                             >> _,
-           sorted      : &array (index_t (ifirst, len)?, len)
-                            >> array (index_t (ifirst, len), len))
+           sorted      : &array (index_t (tk, ifirst, len)?, len)
+                            >> array (index_t (tk, ifirst, len), len))
     :<!wrt> void =
   (*
     k-way merge by tournament tree.
@@ -371,33 +369,37 @@ k_way_merge_refparams
     index.
   *)
   let
+    val zero : g1uint (tk, 0) = g1u2u 0u
+    val one : g1uint (tk, 1) = g1u2u 1u
+    val two : g1uint (tk, 2) = g1u2u 2u
+
     prval () = lemma_g1uint_param ifirst
     prval () = lemma_g1uint_param len
 
-    typedef link_t (i : int) = link_t (ifirst, len, i)
-    typedef link_t = link_t (ifirst, len)
+    typedef link_t (i : int) = link_t (tk, ifirst, len, i)
+    typedef link_t = link_t (tk, ifirst, len)
 
-    val link_nil : link_t 0 = g1u2u 0u
+    val link_nil : link_t 0 = zero
 
-    typedef index_t (i : int) = index_t (ifirst, len, i)
-    typedef index_t = index_t (ifirst, len)
+    typedef index_t (i : int) = index_t (tk, ifirst, len, i)
+    typedef index_t = index_t (tk, ifirst, len)
 
     val [total_external_nodes : int]
         @(_ | total_external_nodes) = next_power_of_two num_piles
     prval () = prop_verify {num_piles <= total_external_nodes} ()
 
     stadef total_nodes = (2 * total_external_nodes) - 1
-    val total_nodes : size_t total_nodes =
+    val total_nodes : g1uint (tk, total_nodes) =
       pred (g1u2u 2u * total_external_nodes)
 
     (* We will ignore index 0 of the winners tree arrays. *)
     stadef winners_size = total_nodes + 1
-    val winners_size : size_t winners_size = succ total_nodes
+    val winners_size : g1uint (tk, winners_size) = succ total_nodes
 
     (* An exercise for the reader is to write a proof that
        winners_size <= 2 * power, so one can get rid of the
        runtime assertion here: *)
-    val () = $effmask_exn assertloc (winners_size <= 2 * power)
+    val () = $effmask_exn assertloc (winners_size <= two * power)
 
     prval @(winvals_left, winvals_right) =
       array_v_split {link_t?} {..} {2 * power} {winners_size}
@@ -409,9 +411,9 @@ k_way_merge_refparams
                     (view@ winlinks)
     prval () = view@ winlinks := winlinks_left
 
-    val () = array_initize_elt<link_t> (winvals, winners_size,
+    val () = array_initize_elt<link_t> (winvals, g1u2u winners_size,
                                         link_nil)
-    val () = array_initize_elt<link_t> (winlinks, winners_size,
+    val () = array_initize_elt<link_t> (winlinks, g1u2u winners_size,
                                         link_nil)
 
 
@@ -423,7 +425,7 @@ k_way_merge_refparams
               {i : nat | i <= num_piles}
               .<num_piles - i>.
               (winlinks : &array (link_t, winners_size),
-               i        : size_t i)
+               i        : g1uint (tk, i))
         :<!wrt> void =
       if i <> num_piles then
         begin
@@ -431,7 +433,7 @@ k_way_merge_refparams
           init_pile_links (winlinks, succ i)
         end
 
-    val () = init_pile_links (winlinks, g1u2u 0u)
+    val () = init_pile_links (winlinks, zero)
 
     (* - - - - - - - - - - - - - - - - - - - - - - - - - - *)
     (* The top of each pile becomes a starting competitor. *)
@@ -442,7 +444,7 @@ k_way_merge_refparams
               .<num_piles - i>.
               (winvals : &array (link_t, winners_size),
                piles   : &array (link_t, len),
-               i       : size_t i)
+               i       : g1uint (tk, i))
         :<!wrt> void =
       if i <> num_piles then
         begin
@@ -460,7 +462,7 @@ k_way_merge_refparams
                  .<num_piles - i>.
                  (piles : &array (link_t, len),
                   links : &array (link_t, len),
-                  i     : size_t i)
+                  i     : g1uint (tk, i))
         :<!wrt> void =
       if i <> num_piles then
         let
@@ -482,24 +484,24 @@ k_way_merge_refparams
     play_game {i       : int | 2 <= i; i <= total_nodes}
               (arr     : &RD(array (a, n)),
                winvals : &array (link_t, winners_size),
-               i       : size_t i)
+               i       : g1uint (tk, i))
         :<> [iwinner : pos | iwinner <= total_nodes]
-            size_t iwinner =
+            g1uint (tk, iwinner) =
       let
         macdef lt = patience_sort$lt<a>
 
         fn
         find_opponent {i : int | 2 <= i; i <= total_nodes}
-                      (i : size_t i)
+                      (i : g1uint (tk, i))
             :<> [j : int | 2 <= j; j <= total_nodes]
-                size_t j =
+                g1uint (tk, j) =
           let
             (* The prelude contains bitwise operations only for
                non-dependent unsigned integer. We will not bother to
                add them ourselves, but instead go back and forth
                between dependent and non-dependent. *)
             val i0 = g0ofg1 i
-            val j0 = g0uint_lxor<size_kind> (i0, g0u2u 1u)
+            val j0 = g0uint_lxor<tk> (i0, g0u2u 1u)
             val j = g1ofg0 j0
 
             (* We have no proof the opponent is in the proper
@@ -550,9 +552,9 @@ k_way_merge_refparams
                (arr      : &RD(array (a, n)),
                 winvals  : &array (link_t, winners_size),
                 winlinks : &array (link_t, winners_size),
-                istart   : size_t istart)
+                istart   : g1uint (tk, istart))
         :<!wrt> void =
-      if istart <> 1 then
+      if istart <> one then
         let
           fun
           play_initial_games
@@ -561,7 +563,7 @@ k_way_merge_refparams
                     (arr      : &RD(array (a, n)),
                      winvals  : &array (link_t, winners_size),
                      winlinks : &array (link_t, winners_size),
-                     i        : size_t i)
+                     i        : g1uint (tk, i))
               :<!wrt> void =
             if i <= pred (istart + istart) then
               let
@@ -575,7 +577,7 @@ k_way_merge_refparams
               end
         in
           play_initial_games (arr, winvals, winlinks, istart);
-          build_tree (arr, winvals, winlinks, istart / g1u2u 2u)
+          build_tree (arr, winvals, winlinks, istart / two)
         end
 
     val () = build_tree (arr, winvals, winlinks, total_external_nodes)
@@ -588,7 +590,7 @@ k_way_merge_refparams
                  (arr      : &RD(array (a, n)),
                   winvals  : &array (link_t, winners_size),
                   winlinks : &array (link_t, winners_size),
-                  i        : size_t i)
+                  i        : g1uint (tk, i))
         :<!wrt> void =
       if i <> g1u2u 1u then
         let
@@ -614,7 +616,7 @@ k_way_merge_refparams
            winvals   : &array (link_t, winners_size),
            winlinks  : &array (link_t, winners_size),
            p_sorted  : ptr p_sorted,
-           isorted   : size_t isorted)
+           isorted   : g1uint (tk, isorted))
         :<!wrt> void =
       (* This function not only fills in the "sorted" array, but
          transforms it from "uninitialized" to "initialized". *)
@@ -633,7 +635,7 @@ k_way_merge_refparams
                       piles[pred ilink] := links[pred inext])
 
           (* Replay games, with the new element as a competitor. *)
-          val i = (total_nodes / g1u2u 2u) + ilink
+          val i = (total_nodes / two) + ilink
           val () = $effmask_exn assertloc (i <= total_nodes)
           val () = winvals[i] := inext
           val () = replay_games (arr, winvals, winlinks, i)
@@ -653,14 +655,12 @@ k_way_merge_refparams
 
     val () = merge (view@ sorted |
                     arr, piles, links, winvals, winlinks,
-                    addr@ sorted, i2sz 0)
+                    addr@ sorted, zero)
 
     prval () =
-      array_uninitize_without_doing_anything
-        (winvals, winners_size)
+      array_v_uninitize_without_doing_anything (view@ winvals)
     prval () =
-      array_uninitize_without_doing_anything
-        (winlinks, winners_size)
+      array_v_uninitize_without_doing_anything (view@ winlinks)
     prval () = view@ winvals :=
       array_v_unsplit (view@ winvals, winvals_right)
     prval () = view@ winlinks :=
@@ -668,7 +668,8 @@ k_way_merge_refparams
   in
   end
 
-fn {a : vt@ype}
+fn {a  : vt@ype}
+   {tk : tkind}
 k_way_merge_valparams
           {ifirst, len : int}
           {n           : int | ifirst + len <= n}
@@ -679,27 +680,27 @@ k_way_merge_valparams
           {p_winvals   : addr}
           {p_winlinks  : addr}
           (pf_exp2     : [exponent : nat] EXP2 (exponent, power),
-           pf_piles    : !array_v (link_t (ifirst, len),
+           pf_piles    : !array_v (link_t (tk, ifirst, len),
                                    p_piles, len) >> _,
-           pf_links    : !array_v (link_t (ifirst, len),
+           pf_links    : !array_v (link_t (tk, ifirst, len),
                                    p_links, len) >> _,
-           pf_winvals  : !array_v (link_t (ifirst, len)?,
+           pf_winvals  : !array_v (link_t (tk, ifirst, len)?,
                                    p_winvals, 2 * power) >> _,
-           pf_winlinks : !array_v (link_t (ifirst, len)?,
+           pf_winlinks : !array_v (link_t (tk, ifirst, len)?,
                                    p_winlinks, 2 * power) >> _ |
            arr         : &RD(array (a, n)),
-           ifirst      : size_t ifirst,
-           len         : size_t len,
-           num_piles   : size_t num_piles,
-           power       : size_t power,
+           ifirst      : g1uint (tk, ifirst),
+           len         : g1uint (tk, len),
+           num_piles   : g1uint (tk, num_piles),
+           power       : g1uint (tk, power),
            p_piles     : ptr p_piles,
            p_links     : ptr p_links,
            p_winvals   : ptr p_winvals,
            p_winlinks  : ptr p_winlinks,
-           sorted      : &array (index_t (ifirst, len)?, len)
-                            >> array (index_t (ifirst, len), len))
+           sorted      : &array (index_t (tk, ifirst, len)?, len)
+                          >> array (index_t (tk, ifirst, len), len))
     :<!wrt> void =
-  k_way_merge_refparams<a>
+  k_way_merge_refparams<a><tk>
     {ifirst, len} {n} {num_piles} {power}
     (pf_exp2 |
      arr, ifirst, len, num_piles, power,
@@ -708,18 +709,21 @@ k_way_merge_valparams
 overload k_way_merge with k_way_merge_refparams
 overload k_way_merge with k_way_merge_valparams
 
-implement {a}
+implement {a} {tk}
 patience_sort_given_workspace
           {ifirst, len} {n} {power} {n_workspace}
           (pf_exp2 | arr, ifirst, len, power, workspace, sorted) =
   let
+    val zero : g1uint (tk, 0) = g1u2u 0u
+    val two : g1uint (tk, 2) = g1u2u 2u
+
     prval () = lemma_g1uint_param ifirst
     prval () = lemma_g1uint_param len
 
-    typedef index_t = index_t (ifirst, len)
-    typedef link_t = link_t (ifirst, len)
+    typedef index_t = index_t (tk, ifirst, len)
+    typedef link_t = link_t (tk, ifirst, len)
   in
-    if len = i2sz 0 then
+    if len = zero then
       let
         prval () = view@ sorted :=
           array_v_unnil_nil{index_t?, index_t} (view@ sorted)
@@ -742,16 +746,16 @@ patience_sort_given_workspace
               (pf_piles, pf_links |
                ifirst, len, arr, p_piles, p_links)
         prval () = lemma_g1uint_param num_piles
-        val () = $effmask_exn assertloc (num_piles <> i2sz 0)
+        val () = $effmask_exn assertloc (num_piles <> zero)
 
         (* FIXME: It may be advantageous to combine winvals and
                   winlinks in the manner of my original Fortran
                   program, where I used a 2-dimensional array with
                   values and links side-by-side. *)
 
-        val p_winvals = ptr_add<link_t> (p_piles, 2 * len)
-        and p_winlinks = ptr_add<link_t> (p_piles,
-                                          (2 * len) + (2 * power))
+        val p_winvals = ptr_add<link_t> (p_piles, two * len)
+        and p_winlinks =
+          ptr_add<link_t> (p_piles, (two * len) + (two * power))
 
         prval @(pf_winvals_and_winlinks, pf_rest) =
           array_v_split {link_t?} {..}
@@ -810,14 +814,17 @@ in
   prval pf_exp2_for_stack_storage = pf_exp2
 end
 
-implement {a}
+implement {a} {tk}
 patience_sort_with_its_own_workspace
           {ifirst, len} {n} (arr, ifirst, len, sorted) =
   let
+    val two : g1uint (tk, 2) = g1u2u 2u
+    val four : g1uint (tk, 4) = g1u2u 4u
+
     prval () = lemma_g1uint_param ifirst
     prval () = lemma_g1uint_param len
 
-    typedef link_t = link_t (ifirst, len)
+    typedef link_t = link_t (tk, ifirst, len)
 
     fn
     sort {ifirst, len : int | 0 <= ifirst}
@@ -826,30 +833,31 @@ patience_sort_with_its_own_workspace
          {n_workspace : int | (2 * len) + (4 * power) <= n_workspace}
          (pf_exp2     : [exponent : nat] EXP2 (exponent, power) |
           arr         : &RD(array (a, n)),
-          ifirst      : size_t ifirst,
-          len         : size_t len,
-          power       : size_t power,
-          workspace   : &array (link_t (ifirst, len)?, n_workspace)
+          ifirst      : g1uint (tk, ifirst),
+          len         : g1uint (tk, len),
+          power       : g1uint (tk, power),
+          workspace   : &array (link_t (tk, ifirst, len)?, n_workspace)
                           >> _,
-          sorted      : &array (index_t (ifirst, len)?, len)
-                          >> array (index_t (ifirst, len), len))
+          sorted      : &array (index_t (tk, ifirst, len)?, len)
+                          >> array (index_t (tk, ifirst, len), len))
         :<!wrt> void =
-      patience_sort_given_workspace<a>
+      patience_sort_given_workspace<a><tk>
         {ifirst, len} {n} {power}
         (pf_exp2 | arr, ifirst, len, power, workspace, sorted)
   in
-    if len <= i2sz LEN_THRESHOLD then
+    if len <= g1i2u LEN_THRESHOLD then
       let
         var workspace : array (link_t?, WORKSPACE_SIZE)
       in
         sort (pf_exp2_for_stack_storage |
-              arr, ifirst, len, i2sz LEN_THRESHOLD, workspace, sorted)
+              arr, ifirst, len, g1i2u LEN_THRESHOLD, workspace, sorted)
       end
     else
       let
-        val @(pf_exp2 | power) = next_power_of_two<size_kind> len
+        val @(pf_exp2 | power) = next_power_of_two<tk> len
         val @(pf_workspace, pfgc_workspace | p_workspace) =
-          array_ptr_alloc<link_t> ((2 * len) + (4 * power))
+          array_ptr_alloc<link_t>
+            (g1u2u ((two * len) + (four * power)))
       in
         sort (pf_exp2 |
               arr, ifirst, len, power, !p_workspace, sorted);

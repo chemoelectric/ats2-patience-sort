@@ -73,7 +73,7 @@ main0 () =
     prval pf_right = array_v_unsplit (pf_middle, pf_right)
     prval () = view@ arr := array_v_unsplit (pf_left, pf_right)
 
-    typedef index_t = patience_sort_index_t (10, len)
+    typedef index_t = patience_sort_index_t (size_kind, 10, len)
 
     var sorted : array (index_t, ARRSZ)
     val () = array_initize_elt<index_t> (sorted, i2sz ARRSZ,

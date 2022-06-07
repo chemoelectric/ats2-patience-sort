@@ -22,18 +22,24 @@
 (* An index into the part of the input array to be sorted. *)
 stadef patience_sort_index_t (ifirst : int, len : int, i : int) =
   len == 0 || (ifirst <= i && i < ifirst + len)
-typedef patience_sort_index_t (ifirst : int, len : int, i : int) =
-  [patience_sort_index_t (ifirst, len, i)] size_t i
-typedef patience_sort_index_t (ifirst : int, len : int) =
-  [i : int] patience_sort_index_t (ifirst, len, i)
+typedef patience_sort_index_t (tk : tkind, ifirst : int,
+                               len : int, i : int) =
+  [patience_sort_index_t (ifirst, len, i)]
+  g1uint (tk, i)
+typedef patience_sort_index_t (tk : tkind, ifirst : int, len : int) =
+  [i : int]
+  patience_sort_index_t (tk, ifirst, len, i)
 
 (* A type used in temporary workspaces. *)
 stadef patience_sort_link_t (ifirst : int, len : int, i : int) =
   0 <= i && i <= len
-typedef patience_sort_link_t (ifirst : int, len : int, i : int) =
-  [patience_sort_link_t (ifirst, len, i)] size_t i
-typedef patience_sort_link_t (ifirst : int, len : int) =
-  [i : int] patience_sort_link_t (ifirst, len, i)
+typedef patience_sort_link_t (tk : tkind, ifirst : int,
+                              len : int, i : int) =
+  [patience_sort_link_t (ifirst, len, i)]
+  g1uint (tk, i)
+typedef patience_sort_link_t (tk : tkind, ifirst : int, len : int) =
+  [i : int]
+  patience_sort_link_t (tk, ifirst, len, i)
 
 (* patience_sort$lt : the order predicate for patience sort. *)
 fn {a : vt@ype}
@@ -41,14 +47,15 @@ patience_sort$lt (x : &RD(a), y : &RD(a)) :<> bool
 
 local
 
-  typedef index_t (ifirst : int, len : int) =
-    patience_sort_index_t (ifirst, len)
-  typedef link_t (ifirst : int, len : int) =
-    patience_sort_link_t (ifirst, len)
+  typedef index_t (tk : tkind, ifirst : int, len : int) =
+    patience_sort_index_t (tk, ifirst, len)
+  typedef link_t (tk : tkind, ifirst : int, len : int) =
+    patience_sort_link_t (tk, ifirst, len)
 
 in
 
   fn {a  : vt@ype}
+     {tk : tkind}
   patience_sort_given_workspace
             {ifirst, len : int | 0 <= ifirst}
             {n           : int | ifirst + len <= n}
@@ -57,24 +64,25 @@ in
                                     <= n_workspace}
             (pf_exp2     : [exponent : nat] EXP2 (exponent, power) |
              arr         : &RD(array (a, n)),
-             ifirst      : size_t ifirst,
-             len         : size_t len,
-             power       : size_t power,
-             workspace   : &array (link_t (ifirst, len)?,
+             ifirst      : g1uint (tk, ifirst),
+             len         : g1uint (tk, len),
+             power       : g1uint (tk, power),
+             workspace   : &array (link_t (tk, ifirst, len)?,
                                    n_workspace) >> _,
-             sorted      : &array (index_t (ifirst, len)?, len)
-                              >> array (index_t (ifirst, len), len))
+             sorted      : &array (index_t (tk, ifirst, len)?, len)
+                            >> array (index_t (tk, ifirst, len), len))
       :<!wrt> void
 
-  fn {a : vt@ype}
+  fn {a  : vt@ype}
+     {tk : tkind}
   patience_sort_with_its_own_workspace
             {ifirst, len : int | 0 <= ifirst}
             {n        : int | ifirst + len <= n}
             (arr      : &RD(array (a, n)),
-             ifirst   : size_t ifirst,
-             len      : size_t len,
-             sorted   : &array (index_t (ifirst, len)?, len)
-                          >> array (index_t (ifirst, len), len))
+             ifirst   : g1uint (tk, ifirst),
+             len      : g1uint (tk, len),
+             sorted   : &array (index_t (tk, ifirst, len)?, len)
+                          >> array (index_t (tk, ifirst, len), len))
       :<!wrt> void
 
 end
