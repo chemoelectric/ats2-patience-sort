@@ -577,7 +577,7 @@ k_way_merge_refparams
               end
         in
           play_initial_games (arr, winvals, winlinks, istart);
-          build_tree (arr, winvals, winlinks, istart / two)
+          build_tree (arr, winvals, winlinks, half istart)
         end
 
     val () = build_tree (arr, winvals, winlinks, total_external_nodes)
@@ -595,7 +595,7 @@ k_way_merge_refparams
       if i <> g1u2u 1u then
         let
           val iwinner = play_game (arr, winvals, i)
-          and i2 = i / g1u2u 2u
+          and i2 = half i
         in
           winvals[i2] := winvals[iwinner];
           winlinks[i2] := winlinks[iwinner];
@@ -635,7 +635,7 @@ k_way_merge_refparams
                       piles[pred ilink] := links[pred inext])
 
           (* Replay games, with the new element as a competitor. *)
-          val i = (total_nodes / two) + ilink
+          val i = half total_nodes + ilink
           val () = $effmask_exn assertloc (i <= total_nodes)
           val () = winvals[i] := inext
           val () = replay_games (arr, winvals, winlinks, i)
