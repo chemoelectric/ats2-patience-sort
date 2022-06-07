@@ -49,14 +49,22 @@ array_v_takeout_two
     :<prf> @(a @ (p + (i * sizeof a)),
              a @ (p + (j * sizeof a)),
              (a @ (p + (i * sizeof a)),
-              a @ (p + (j * sizeof a))) -<prf> array_v (a, p, n))
+              a @ (p + (j * sizeof a))) -<lin,prf> array_v (a, p, n))
 
 extern praxi
 array_uninitize_without_doing_anything
-          {a : vt@ype}
+          {a   : vt@ype}
           {n   : int}
           (arr : &array (INV(a), n) >> array (a?, n),
            asz : size_t n)
+    :<prf> void
+
+extern praxi
+array_v_uninitize_without_doing_anything
+          {a   : vt@ype}
+          {p   : addr}
+          {n   : int}
+          (arr : !array_v (INV(a), p, n) >> array_v (a?, p, n))
     :<prf> void
 
 extern fn {tk : tkind}
@@ -238,15 +246,16 @@ find_pile {ifirst, len : int}
     end
 
 fn {a : vt@ype}
-deal {ifirst, len : int}
-     {n           : int | ifirst + len <= n}
-     (ifirst      : size_t ifirst,
-      len         : size_t len,
-      arr         : &RD(array (a, n)),
-      piles       : &array (link_t (ifirst, len)?, len)
-                      >> array (link_t (ifirst, len), len),
-      links       : &array (link_t (ifirst, len)?, len)
-                      >> array (link_t (ifirst, len), len))
+deal_refparams
+          {ifirst, len : int}
+          {n           : int | ifirst + len <= n}
+          (ifirst      : size_t ifirst,
+           len         : size_t len,
+           arr         : &RD(array (a, n)),
+           piles       : &array (link_t (ifirst, len)?, len)
+                           >> array (link_t (ifirst, len), len),
+           links       : &array (link_t (ifirst, len)?, len)
+                           >> array (link_t (ifirst, len), len))
     :<!wrt> [num_piles   : int | num_piles <= len]
             size_t num_piles =
   (*
@@ -301,24 +310,52 @@ deal {ifirst, len : int}
   end
 
 fn {a : vt@ype}
-k_way_merge {ifirst, len : int}
-            {n           : int | ifirst + len <= n}
-            {num_piles   : pos | num_piles <= len}
-            {power       : int | len <= power}
-            (pf_exp2     : [exponent : nat] EXP2 (exponent, power) |
-             arr         : &RD(array (a, n)),
-             ifirst      : size_t ifirst,
-             len         : size_t len,
-             num_piles   : size_t num_piles,
-             power       : size_t power,
-             piles       : &array (link_t (ifirst, len), len) >> _,
-             links       : &RD(array (link_t (ifirst, len), len)),
-             winvals     : &array (link_t (ifirst, len)?, 2 * power)
-                              >> _,
-             winlinks    : &array (link_t (ifirst, len)?, 2 * power)
-                              >> _,
-             sorted      : &array (index_t (ifirst, len)?, len)
-                              >> array (index_t (ifirst, len), len))
+deal_valparams
+          {ifirst, len : int}
+          {n           : int | ifirst + len <= n}
+          {p_piles     : addr}
+          {p_links     : addr}
+          (pf_piles    : !array_v (link_t (ifirst, len)?,
+                                   p_piles, len)
+                            >> array_v (link_t (ifirst, len),
+                                        p_piles, len),
+           pf_links    : !array_v (link_t (ifirst, len)?,
+                                   p_links, len)
+                            >> array_v (link_t (ifirst, len),
+                                        p_links, len) |
+           ifirst      : size_t ifirst,
+           len         : size_t len,
+           arr         : &RD(array (a, n)),
+           p_piles     : ptr p_piles,
+           p_links     : ptr p_links)
+         :<!wrt> [num_piles   : int | num_piles <= len]
+                 size_t num_piles =
+  deal_refparams<a> {ifirst, len} {n}
+                    (ifirst, len, arr, !p_piles, !p_links)
+
+overload deal with deal_valparams
+overload deal with deal_refparams
+
+fn {a : vt@ype}
+k_way_merge_refparams
+          {ifirst, len : int}
+          {n           : int | ifirst + len <= n}
+          {num_piles   : pos | num_piles <= len}
+          {power       : int | len <= power}
+          (pf_exp2     : [exponent : nat] EXP2 (exponent, power) |
+           arr         : &RD(array (a, n)),
+           ifirst      : size_t ifirst,
+           len         : size_t len,
+           num_piles   : size_t num_piles,
+           power       : size_t power,
+           piles       : &array (link_t (ifirst, len), len) >> _,
+           links       : &RD(array (link_t (ifirst, len), len)),
+           winvals     : &array (link_t (ifirst, len)?, 2 * power)
+                            >> _,
+           winlinks    : &array (link_t (ifirst, len)?, 2 * power)
+                            >> _,
+           sorted      : &array (index_t (ifirst, len)?, len)
+                            >> array (index_t (ifirst, len), len))
     :<!wrt> void =
   (*
     k-way merge by tournament tree.
@@ -631,13 +668,50 @@ k_way_merge {ifirst, len : int}
   in
   end
 
+fn {a : vt@ype}
+k_way_merge_valparams
+          {ifirst, len : int}
+          {n           : int | ifirst + len <= n}
+          {num_piles   : pos | num_piles <= len}
+          {power       : int | len <= power}
+          {p_piles     : addr}
+          {p_links     : addr}
+          {p_winvals   : addr}
+          {p_winlinks  : addr}
+          (pf_exp2     : [exponent : nat] EXP2 (exponent, power),
+           pf_piles    : !array_v (link_t (ifirst, len),
+                                   p_piles, len) >> _,
+           pf_links    : !array_v (link_t (ifirst, len),
+                                   p_links, len) >> _,
+           pf_winvals  : !array_v (link_t (ifirst, len)?,
+                                   p_winvals, 2 * power) >> _,
+           pf_winlinks : !array_v (link_t (ifirst, len)?,
+                                   p_winlinks, 2 * power) >> _ |
+           arr         : &RD(array (a, n)),
+           ifirst      : size_t ifirst,
+           len         : size_t len,
+           num_piles   : size_t num_piles,
+           power       : size_t power,
+           p_piles     : ptr p_piles,
+           p_links     : ptr p_links,
+           p_winvals   : ptr p_winvals,
+           p_winlinks  : ptr p_winlinks,
+           sorted      : &array (index_t (ifirst, len)?, len)
+                            >> array (index_t (ifirst, len), len))
+    :<!wrt> void =
+  k_way_merge_refparams<a>
+    {ifirst, len} {n} {num_piles} {power}
+    (pf_exp2 |
+     arr, ifirst, len, num_piles, power,
+     !p_piles, !p_links, !p_winvals, !p_winlinks, sorted)
+
+overload k_way_merge with k_way_merge_refparams
+overload k_way_merge with k_way_merge_valparams
+
 implement {a}
-patience_sort_given_workspaces
-          {ifirst, len} {n} {power}
-          {n_piles} {n_links} {n_winv} {n_winl}
-          (pf_exp2 | arr, ifirst, len, power,
-                     piles, links, winvals, winlinks,
-                     sorted) =
+patience_sort_given_workspace
+          {ifirst, len} {n} {power} {n_workspace}
+          (pf_exp2 | arr, ifirst, len, power, workspace, sorted) =
   let
     prval () = lemma_g1uint_param ifirst
     prval () = lemma_g1uint_param len
@@ -653,62 +727,75 @@ patience_sort_given_workspaces
       end
     else
       let
-        prval @(piles_left, piles_right) =
-          array_v_split {link_t?} {..} {n_piles} {len} (view@ piles)
-        prval () = view@ piles := piles_left
+        val p_piles = addr@ workspace
+        and p_links = ptr_add<link_t> (addr@ workspace, len)
 
-        prval @(links_left, links_right) =
-          array_v_split {link_t?} {..} {n_links} {len} (view@ links)
-        prval () = view@ links := links_left
-
-        prval @(winvals_left, winvals_right) =
-          array_v_split {link_t?} {..} {n_winv} {2 * power}
-                        (view@ winvals)
-        prval () = view@ winvals := winvals_left
-
-        prval @(winlinks_left, winlinks_right) =
-          array_v_split {link_t?} {..} {n_winl} {2 * power}
-                        (view@ winlinks)
-        prval () = view@ winlinks := winlinks_left
+        prval @(pf_piles_and_links, pf_rest) =
+          array_v_split {link_t?} {..} {n_workspace} {2 * len}
+                        (view@ workspace)
+        prval @(pf_piles, pf_links) =
+          array_v_split {link_t?} {..} {2 * len} {len}
+                        pf_piles_and_links
 
         val num_piles =
-          deal {ifirst, len} {n} (ifirst, len, arr, piles, links)
+         deal {ifirst, len} {n}
+              (pf_piles, pf_links |
+               ifirst, len, arr, p_piles, p_links)
         prval () = lemma_g1uint_param num_piles
         val () = $effmask_exn assertloc (num_piles <> i2sz 0)
 
+        (* FIXME: It may be advantageous to combine winvals and
+                  winlinks in the manner of my original Fortran
+                  program, where I used a 2-dimensional array with
+                  values and links side-by-side. *)
+
+        val p_winvals = ptr_add<link_t> (p_piles, 2 * len)
+        and p_winlinks = ptr_add<link_t> (p_piles,
+                                          (2 * len) + (2 * power))
+
+        prval @(pf_winvals_and_winlinks, pf_rest) =
+          array_v_split {link_t?} {..}
+                        {n_workspace - (2 * len)} {4 * power}
+                        pf_rest
+        prval @(pf_winvals, pf_winlinks) =
+          array_v_split {link_t?} {..} {4 * power} {2 * power}
+                        pf_winvals_and_winlinks
+
         val () =
           k_way_merge {ifirst, len} {n} {..} {power}
-                      (pf_exp2 | arr, ifirst, len, num_piles, power,
-                                 piles, links, winvals, winlinks,
-                                 sorted)
+                      (pf_exp2, pf_piles, pf_links,
+                       pf_winvals, pf_winlinks |
+                       arr, ifirst, len, num_piles, power,
+                       p_piles, p_links, p_winvals, p_winlinks,
+                       sorted)
 
-        prval () =
-          array_uninitize_without_doing_anything
-            (piles, len)
-        prval () =
-          array_uninitize_without_doing_anything
-            (links, len)
+        prval pf_winvals_and_winlinks =
+          array_v_unsplit (pf_winvals, pf_winlinks)
+        prval pf_rest =
+          array_v_unsplit (pf_winvals_and_winlinks, pf_rest)
 
-        prval () = view@ piles :=
-          array_v_unsplit (view@ piles, piles_right)
-        prval () = view@ links :=
-          array_v_unsplit (view@ links, links_right)
-        prval () = view@ winvals :=
-          array_v_unsplit (view@ winvals, winvals_right)
-        prval () = view@ winlinks :=
-          array_v_unsplit (view@ winlinks, winlinks_right)
+        prval () = array_v_uninitize_without_doing_anything pf_piles
+        prval () = array_v_uninitize_without_doing_anything pf_links
+
+        prval pf_piles_and_links =
+          array_v_unsplit (pf_piles, pf_links)
+        prval () = view@ workspace :=
+          array_v_unsplit (pf_piles_and_links, pf_rest)
       in
       end
   end
 
 (* ================================================================ *)
-(* An interface that provides the workspaces. If the subarray to    *)
+(* An interface that provides the workspace. If the subarray to     *)
 (* be sorted is small enough, stack storage will be used.           *)
 
-#define LEN_THRESHOLD 128
-#define WINNERS_SIZE  256
+#define LEN_THRESHOLD  128
+#define WINNERS_SIZE   256
+#define WORKSPACE_SIZE 768
 
 prval () = prop_verify {WINNERS_SIZE == 2 * LEN_THRESHOLD} ()
+prval () = prop_verify {WORKSPACE_SIZE ==
+                          (2 * LEN_THRESHOLD) + (2 * WINNERS_SIZE)} ()
 
 local
   prval pf_exp2 = EXP2bas ()      (*   1*)
@@ -724,7 +811,7 @@ in
 end
 
 implement {a}
-patience_sort_with_its_own_workspaces
+patience_sort_with_its_own_workspace
           {ifirst, len} {n} (arr, ifirst, len, sorted) =
   let
     prval () = lemma_g1uint_param ifirst
@@ -734,67 +821,39 @@ patience_sort_with_its_own_workspaces
 
     fn
     sort {ifirst, len : int | 0 <= ifirst}
-         {n        : int | ifirst + len <= n}
-         {power    : int | len <= power}
-         {n_piles  : int | len <= n_piles}
-         {n_links  : int | len <= n_links}
-         {n_winv   : int | 2 * power <= n_winv}
-         {n_winl   : int | 2 * power <= n_winl}
-         (pf_exp2  : [exponent : nat] EXP2 (exponent, power) |
-          arr      : &RD(array (a, n)),
-          ifirst   : size_t ifirst,
-          len      : size_t len,
-          power    : size_t power,
-          piles    : &array (link_t (ifirst, len)?, n_piles) >> _,
-          links    : &array (link_t (ifirst, len)?, n_links) >> _,
-          winvals  : &array (link_t (ifirst, len)?, n_winv) >> _,
-          winlinks : &array (link_t (ifirst, len)?, n_winl) >> _,
-          sorted   : &array (index_t (ifirst, len)?, len)
-                       >> array (index_t (ifirst, len), len))
+         {n           : int | ifirst + len <= n}
+         {power       : int | len <= power}
+         {n_workspace : int | (2 * len) + (4 * power) <= n_workspace}
+         (pf_exp2     : [exponent : nat] EXP2 (exponent, power) |
+          arr         : &RD(array (a, n)),
+          ifirst      : size_t ifirst,
+          len         : size_t len,
+          power       : size_t power,
+          workspace   : &array (link_t (ifirst, len)?, n_workspace)
+                          >> _,
+          sorted      : &array (index_t (ifirst, len)?, len)
+                          >> array (index_t (ifirst, len), len))
         :<!wrt> void =
-      patience_sort_given_workspaces<a>
+      patience_sort_given_workspace<a>
         {ifirst, len} {n} {power}
-        {n_piles} {n_links} {n_winv} {n_winl}
-        (pf_exp2 | arr, ifirst, len, power, piles, links,
-                   winvals, winlinks, sorted)
+        (pf_exp2 | arr, ifirst, len, power, workspace, sorted)
   in
     if len <= i2sz LEN_THRESHOLD then
       let
-        var piles : array (link_t?, LEN_THRESHOLD)
-        var links : array (link_t?, LEN_THRESHOLD)
-        var winvals : array (link_t?, WINNERS_SIZE)
-        var winlinks : array (link_t?, WINNERS_SIZE)
+        var workspace : array (link_t?, WORKSPACE_SIZE)
       in
         sort (pf_exp2_for_stack_storage |
-              arr, ifirst, len, i2sz LEN_THRESHOLD,
-              piles, links, winvals, winlinks, sorted)
+              arr, ifirst, len, i2sz LEN_THRESHOLD, workspace, sorted)
       end
     else
       let
-        val @(pf_piles, pfgc_piles | p_piles) =
-          array_ptr_alloc<link_t> len
-        val @(pf_links, pfgc_links | p_links) =
-          array_ptr_alloc<link_t> len
-
         val @(pf_exp2 | power) = next_power_of_two<size_kind> len
-
-        val @(pf_winvals, pfgc_winvals | p_winvals) =
-          array_ptr_alloc<link_t> (power + power)
-        val @(pf_winlinks, pfgc_winlinks | p_winlinks) =
-          array_ptr_alloc<link_t> (power + power)
-
-        macdef piles = !p_piles
-        macdef links = !p_links
-        macdef winvals = !p_winvals
-        macdef winlinks = !p_winlinks
+        val @(pf_workspace, pfgc_workspace | p_workspace) =
+          array_ptr_alloc<link_t> ((2 * len) + (4 * power))
       in
         sort (pf_exp2 |
-              arr, ifirst, len, power, piles, links,
-              winvals, winlinks, sorted);
-        array_ptr_free (pf_piles, pfgc_piles | p_piles);
-        array_ptr_free (pf_links, pfgc_links | p_links);
-        array_ptr_free (pf_winvals, pfgc_winvals | p_winvals);
-        array_ptr_free (pf_winlinks, pfgc_winlinks | p_winlinks)
+              arr, ifirst, len, power, !p_workspace, sorted);
+        array_ptr_free (pf_workspace, pfgc_workspace | p_workspace)
       end
   end
 
