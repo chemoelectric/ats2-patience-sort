@@ -28,10 +28,11 @@ staload _ = "patience-sort/DATS/patience-sort.dats"
 
 *)
 
-fn {a : t@ype}
+fn {a  : t@ype}
+   {tk : tkind}
 find_length {n   : int}
             (lst : list (a, n))
-    :<> [m : int | m == n] size_t m =
+    :<> [m : int | m == n] g1uint (tk, m) =
   let
     prval () = lemma_list_param lst
   in
@@ -53,11 +54,11 @@ main0 () =
       $list (2, 4, 8, 15, 22, 22, 37, 38, 46, 48, 49, 53, 54, 54, 58,
              70, 72, 76, 80, 82, 84, 86, 90, 93, 98)
 
-    val ifirst = i2sz 10
+    val ifirst = 10u
     val [len : int] len = find_length example_list
 
     #define ARRSZ 100
-    val () = assertloc (i2sz 10 + len <= ARRSZ)
+    val () = assertloc (10u + len <= ARRSZ)
 
     var arr : array (int, ARRSZ)
     val () = array_initize_elt<int> (arr, i2sz ARRSZ, 0)
@@ -73,26 +74,25 @@ main0 () =
     prval pf_right = array_v_unsplit (pf_middle, pf_right)
     prval () = view@ arr := array_v_unsplit (pf_left, pf_right)
 
-    typedef index_t = patience_sort_index_t (size_kind, 10, len)
+    typedef index_t = patience_sort_index_t (uint_kind, 10, len)
 
     var sorted : array (index_t, ARRSZ)
-    val () = array_initize_elt<index_t> (sorted, i2sz ARRSZ,
-                                         g1u2u 10u)
+    val () = array_initize_elt<index_t> (sorted, i2sz ARRSZ, 10u)
     
     prval @(sorted_left, sorted_right) =
       array_v_split {index_t} {..} {ARRSZ} {len} (view@ sorted)
     prval () = view@ sorted := sorted_left
 
-    val () = patience_sort<int> (arr, i2sz 10, len, sorted)
+    val () = patience_sort<int> (arr, 10u, len, sorted)
 
     prval () = view@ sorted :=
       array_v_unsplit (view@ sorted, sorted_right)
 
-    var i : [i : nat | i <= len] size_t i
+    var i : [i : nat | i <= len] uint i
     var p : List (int) = sorted_list
     prval () = lemma_list_param p
   in
-    for (i := i2sz 0; i <> len; i := succ i)
+    for (i := 0u; i <> len; i := succ i)
       let
         val () = assertloc (isneqz p)
       in
