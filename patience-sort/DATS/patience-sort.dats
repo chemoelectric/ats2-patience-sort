@@ -720,75 +720,18 @@ patience_sort_merge_valparams
   in
   end
 
-implement {a} {tk}
-patience_sort_given_workspace
-          {ifirst, len} {n} {power} {n_workspace}
-          (pf_exp2 | arr, ifirst, len, power, workspace, sorted) =
-  let
-    val zero : g1uint (tk, 0) = g1u2u 0u
-    val two : g1uint (tk, 2) = g1u2u 2u
-
-    prval () = lemma_g1uint_param ifirst
-    prval () = lemma_g1uint_param len
-
-    typedef index_t = index_t (tk, ifirst, len)
-    typedef link_t = link_t (tk, ifirst, len)
-  in
-    if len = zero then
-      let
-        prval () = view@ sorted :=
-          array_v_unnil_nil{index_t?, index_t} (view@ sorted)
-      in
-      end
-    else
-      let
-        val p_piles = addr@ workspace
-        and p_links = ptr_add<link_t> (addr@ workspace, len)
-
-        prval @(pf_piles_and_links, pf_rest) =
-          array_v_split {link_t?} {..} {n_workspace} {2 * len}
-                        (view@ workspace)
-        prval @(pf_piles, pf_links) =
-          array_v_split {link_t?} {..} {2 * len} {len}
-                        pf_piles_and_links
-
-        val num_piles =
-         patience_sort_deal<a><tk>
-          {ifirst, len} {n}
-          (pf_piles, pf_links | ifirst, len, arr, p_piles, p_links)
-        prval () = lemma_g1uint_param num_piles
-        val () = $effmask_exn assertloc (num_piles <> zero)
-
-        val p_rest = ptr_add<link_t> (p_piles, two * len)
-        val () =
-          patience_sort_merge<a><tk>
-            {ifirst, len} {n} {..} {power}
-            (pf_exp2, pf_piles, pf_links, pf_rest |
-             arr, ifirst, len, num_piles, power,
-             p_piles, p_links, p_rest, sorted)
-
-        prval () = array_v_uninitize_without_doing_anything pf_piles
-        prval () = array_v_uninitize_without_doing_anything pf_links
-
-        prval pf_piles_and_links =
-          array_v_unsplit (pf_piles, pf_links)
-        prval () = view@ workspace :=
-          array_v_unsplit (pf_piles_and_links, pf_rest)
-      in
-      end
-  end
-
 (* ================================================================ *)
-(* An interface that provides the workspace. If the subarray to     *)
-(* be sorted is small enough, stack storage will be used.           *)
+(* An interface that provides workspace. If the subarray to be      *)
+(* sorted is small enough, stack storage will be used.              *)
 
-#define LEN_THRESHOLD  128
-#define WINNERS_SIZE   256
-#define WORKSPACE_SIZE 768
+#define LEN_THRESHOLD   128
+#define PILES_SIZE      128
+#define LINKS_SIZE      128
+#define WORKSPACE_SIZE  512
 
-prval () = prop_verify {WINNERS_SIZE == 2 * LEN_THRESHOLD} ()
-prval () = prop_verify {WORKSPACE_SIZE ==
-                          (2 * LEN_THRESHOLD) + (2 * WINNERS_SIZE)} ()
+prval () = prop_verify {PILES_SIZE == LEN_THRESHOLD} ()
+prval () = prop_verify {LINKS_SIZE == LEN_THRESHOLD} ()
+prval () = prop_verify {WORKSPACE_SIZE == 4 * LEN_THRESHOLD} ()
 
 local
   prval pf_exp2 = EXP2bas ()      (*   1*)
@@ -807,49 +750,129 @@ implement {a} {tk}
 patience_sort_with_its_own_workspace
           {ifirst, len} {n} (arr, ifirst, len, sorted) =
   let
-    val two : g1uint (tk, 2) = g1u2u 2u
+    val zero : g1uint (tk, 0) = g1u2u 0u
     val four : g1uint (tk, 4) = g1u2u 4u
 
     prval () = lemma_g1uint_param ifirst
     prval () = lemma_g1uint_param len
 
+    typedef index_t = index_t (tk, ifirst, len)
     typedef link_t = link_t (tk, ifirst, len)
 
     fn
-    sort {ifirst, len : int | 0 <= ifirst}
-         {n           : int | ifirst + len <= n}
-         {power       : int | len <= power}
-         {n_workspace : int | (2 * len) + (4 * power) <= n_workspace}
-         (pf_exp2     : [exponent : nat] EXP2 (exponent, power) |
-          arr         : &RD(array (a, n)),
+    deal {p_piles     : addr}
+         {p_links     : addr}
+         (pf_piles    : !array_v (link_t?, p_piles, len)
+                           >> array_v (link_t, p_piles, len),
+          pf_links    : !array_v (link_t?, p_links, len)
+                           >> array_v (link_t, p_links, len) |
           ifirst      : g1uint (tk, ifirst),
           len         : g1uint (tk, len),
-          power       : g1uint (tk, power),
-          workspace   : &array (link_t (tk, ifirst, len)?, n_workspace)
-                          >> _,
-          sorted      : &array (index_t (tk, ifirst, len)?, len)
-                          >> array (index_t (tk, ifirst, len), len))
+          arr         : &RD(array (a, n)),
+          p_piles     : ptr p_piles,
+          p_links     : ptr p_links)
+        :<!wrt> [num_piles : int | num_piles <= len]
+                g1uint (tk, num_piles) =
+      patience_sort_deal<a><tk>
+        (pf_piles, pf_links | ifirst, len, arr, p_piles, p_links)
+
+    fn
+    merge {num_piles    : pos | num_piles <= len}
+          {power        : int | num_piles <= power}
+          {n_workspace  : int | 4 * power <= n_workspace}
+          {p_piles      : addr}
+          {p_links      : addr}
+          {p_workspace  : addr}
+          (pf_exp2      : [exponent : nat] EXP2 (exponent, power),
+           pf_piles     : !array_v (link_t, p_piles, len) >> _,
+           pf_links     : !array_v (link_t, p_links, len) >> _,
+           pf_workspace : !array_v (link_t?, p_workspace,
+                                    n_workspace) >> _ |
+           arr          : &RD(array (a, n)),
+           ifirst       : g1uint (tk, ifirst),
+           len          : g1uint (tk, len),
+           num_piles    : g1uint (tk, num_piles),
+           power        : g1uint (tk, power),
+           p_piles      : ptr p_piles,
+           p_links      : ptr p_links,
+           p_workspace  : ptr p_workspace,
+           sorted       : &array (index_t?, len)
+                              >> array (index_t, len))
         :<!wrt> void =
-      patience_sort_given_workspace<a><tk>
-        {ifirst, len} {n} {power}
-        (pf_exp2 | arr, ifirst, len, power, workspace, sorted)
+      patience_sort_merge<a><tk>
+        (pf_exp2, pf_piles, pf_links, pf_workspace |
+         arr, ifirst, len, num_piles, power, p_piles, p_links,
+         p_workspace, sorted)
   in
-    if len <= g1i2u LEN_THRESHOLD then
+    if len = zero then
       let
-        var workspace : array (link_t?, WORKSPACE_SIZE)
+        prval () = view@ sorted :=
+          array_v_unnil_nil{index_t?, index_t} (view@ sorted)
       in
-        sort (pf_exp2_for_stack_storage |
-              arr, ifirst, len, g1i2u LEN_THRESHOLD, workspace, sorted)
+      end
+    else if len <= g1i2u LEN_THRESHOLD then
+      (* Use stack storage. *)
+      let
+        var piles : array (link_t, PILES_SIZE)
+        var links : array (link_t, LINKS_SIZE)
+        var workspace : array (link_t, WORKSPACE_SIZE)
+
+        prval @(pf_piles, pf_piles_rest) =
+          array_v_split {link_t?} {..} {PILES_SIZE} {len}
+                        (view@ piles)
+        prval @(pf_links, pf_links_rest) =
+          array_v_split {link_t?} {..} {LINKS_SIZE} {len}
+                        (view@ links)
+
+        val num_piles =
+          deal (pf_piles, pf_links |
+                ifirst, len, arr, addr@ piles, addr@ links)
+
+        prval () = lemma_g1uint_param num_piles
+        val () = $effmask_exn assertloc (num_piles <> zero)
+
+        prval pf_exp2 = pf_exp2_for_stack_storage
+        val power = g1i2u LEN_THRESHOLD
+
+        val () =
+          merge (pf_exp2, pf_piles, pf_links, view@ workspace |
+                 arr, ifirst, len, num_piles, power,
+                 addr@ piles, addr@ links, addr@ workspace, sorted)
+
+        prval () = array_v_uninitize_without_doing_anything pf_piles
+        prval () = array_v_uninitize_without_doing_anything pf_links
+
+        prval () = view@ piles :=
+          array_v_unsplit (pf_piles, pf_piles_rest)
+        prval () = view@ links :=
+          array_v_unsplit (pf_links, pf_links_rest)
+      in
       end
     else
+      (* Use malloc storage. *)
       let
-        val @(pf_exp2 | power) = next_power_of_two<tk> len
+        val @(pf_piles, pfgc_piles | p_piles) =
+          array_ptr_alloc<link_t> (g1u2u len)
+        val @(pf_links, pfgc_links | p_links) =
+          array_ptr_alloc<link_t> (g1u2u len)
+
+        val num_piles =
+          deal (pf_piles, pf_links |
+                ifirst, len, arr, p_piles, p_links)
+
+        prval () = lemma_g1uint_param num_piles
+        val () = $effmask_exn assertloc (num_piles <> zero)
+
+        val @(pf_exp2 | power) = next_power_of_two<tk> num_piles
         val @(pf_workspace, pfgc_workspace | p_workspace) =
-          array_ptr_alloc<link_t>
-            (g1u2u ((two * len) + (four * power)))
+          array_ptr_alloc<link_t> (g1u2u (four * power))
       in
-        sort (pf_exp2 |
-              arr, ifirst, len, power, !p_workspace, sorted);
+        merge (pf_exp2, pf_piles, pf_links, pf_workspace |
+               arr, ifirst, len, num_piles, power,
+               p_piles, p_links, p_workspace, sorted);
+
+        array_ptr_free (pf_piles, pfgc_piles | p_piles);
+        array_ptr_free (pf_links, pfgc_links | p_links);
         array_ptr_free (pf_workspace, pfgc_workspace | p_workspace)
       end
   end

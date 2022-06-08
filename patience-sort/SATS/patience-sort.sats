@@ -89,7 +89,7 @@ in
              arr         : &RD(array (a, n)),
              p_piles     : ptr p_piles,
              p_links     : ptr p_links)
-      :<!wrt> [num_piles   : int | num_piles <= len]
+      :<!wrt> [num_piles : int | num_piles <= len]
               g1uint (tk, num_piles)
 
   overload patience_sort_deal with patience_sort_deal_refparams
@@ -151,28 +151,11 @@ in
   overload patience_sort_merge with patience_sort_merge_refparams
   overload patience_sort_merge with patience_sort_merge_valparams
 
+  (* patience_sort_with_its_own_workspace --
+     May use stack, malloc, or any combination. *)
   fn {a  : vt@ype}
      {tk : tkind}
-  patience_sort_given_workspace (* FIXME: GET RID OF THIS ***********************************************************)
-            {ifirst, len : int | 0 <= ifirst}
-            {n           : int | ifirst + len <= n}
-            {power       : int | len <= power}
-            {n_workspace : int | (2 * len) + (4 * power)
-                                    <= n_workspace}
-            (pf_exp2     : [exponent : nat] EXP2 (exponent, power) |
-             arr         : &RD(array (a, n)),
-             ifirst      : g1uint (tk, ifirst),
-             len         : g1uint (tk, len),
-             power       : g1uint (tk, power),
-             workspace   : &array (link_t (tk, ifirst, len)?,
-                                   n_workspace) >> _,
-             sorted      : &array (index_t (tk, ifirst, len)?, len)
-                            >> array (index_t (tk, ifirst, len), len))
-      :<!wrt> void
-
-  fn {a  : vt@ype}
-     {tk : tkind}
-  patience_sort_with_its_own_workspace
+  patience_sort_with_its_own_workspace (* FIXME: NEEDS A BETTER NAME **********************************************)
             {ifirst, len : int | 0 <= ifirst}
             {n        : int | ifirst + len <= n}
             (arr      : &RD(array (a, n)),
@@ -184,5 +167,4 @@ in
 
 end
 
-overload patience_sort with patience_sort_given_workspace
 overload patience_sort with patience_sort_with_its_own_workspace
