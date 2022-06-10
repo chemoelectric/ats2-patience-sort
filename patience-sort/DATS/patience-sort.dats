@@ -138,8 +138,8 @@ find_pile {n         : int}
     :<> [i : pos | i <= num_piles + 1]
         g1uint (tk, i) =
   (*
-    Bottenbruch search for the leftmost pile whose top is greater than
-    or equal to the next value dealt by "deal".
+    Bottenbruch search for the *leftmost* pile whose *first* element
+    is *greater* than or equal to the next value dealt by "deal".
 
     References:
 
@@ -172,6 +172,8 @@ find_pile {n         : int}
               succ j
             else
               let
+(* val () = $effmask_all println! ("j = ", $UNSAFE.cast{uint} j) *)
+(* val () = $effmask_all println! ("piles[j] = ", $UNSAFE.cast{uint} piles[j]) *)
                 val [piles_j : int] piles_j = piles[j]
                 val () = $effmask_exn assertloc (piles_j <> g1u2u 0u)
 
@@ -189,13 +191,17 @@ find_pile {n         : int}
                 val x2_lt_x1 =
                   (!(ptr_add<a> (addr@ arr, i2)))
                     \lt (!(ptr_add<a> (addr@ arr, i1)))
+(* val () = $effmask_all println! ("branch for piles possible increase in num_piles") *)
+(* val () = $effmask_all println! ("  x1 = ", $UNSAFE.ptr0_get<int> (ptr_add<a> (addr@ arr, i1))) *)
+(* val () = $effmask_all println! ("  x2 = ", $UNSAFE.ptr0_get<int> (ptr_add<a> (addr@ arr, i2))) *)
+(* val () = $effmask_all println! ("  x2_lt_x1 = ", x2_lt_x1) *)
 
                 prval () = view@ arr := fpf (pfelem1, pfelem2)
               in
                 if x2_lt_x1 then
-                  succ (succ j)
+                  succ num_piles
                 else
-                  succ j
+                  num_piles
               end
           end
         else
@@ -222,6 +228,10 @@ find_pile {n         : int}
             val x2_lt_x1 =
               (!(ptr_add<a> (addr@ arr, i2)))
                 \lt (!(ptr_add<a> (addr@ arr, i1)))
+(* val () = $effmask_all println! ("branch for piles looping") *)
+(* val () = $effmask_all println! ("  x1 = ", $UNSAFE.ptr0_get<int> (ptr_add<a> (addr@ arr, i1))) *)
+(* val () = $effmask_all println! ("  x2 = ", $UNSAFE.ptr0_get<int> (ptr_add<a> (addr@ arr, i2))) *)
+(* val () = $effmask_all println! ("  x2_lt_x1 = ", x2_lt_x1) *)
 
             prval () = view@ arr := fpf (pfelem1, pfelem2)
           in
@@ -232,6 +242,133 @@ find_pile {n         : int}
           end
     in
       loop (arr, piles, g1u2u 0u, pred num_piles)
+    end
+
+fn {a  : vt@ype}
+   {tk : tkind}
+find_last_elem
+          {n            : int}
+          {num_piles    : nat | num_piles <= n}
+          {n_last_elems : int | n <= n_last_elems}
+          {q            : pos | q <= n}
+          (arr          : &RD(array (a, n)),
+           num_piles    : g1uint (tk, num_piles),
+           last_elems   : &RD(array (link_t (tk, n), n_last_elems)),
+           q            : g1uint (tk, q))
+    :<> [i : pos | i <= num_piles + 1]
+        g1uint (tk, i) =
+  (*
+    Bottenbruch search for the *rightmost* pile whose *last* element
+    is *less* than or equal to the next value dealt by "deal".
+
+    References:
+
+      * H. Bottenbruch, "Structure and use of ALGOL 60", Journal of
+        the ACM, Volume 9, Issue 2, April 1962, pp.161-221.
+        https://doi.org/10.1145/321119.321120
+
+        The general algorithm is described on pages 214 and 215.
+
+      * https://en.wikipedia.org/w/index.php?title=Binary_search_algorithm&oldid=1062988272#Alternative_procedure
+  *)
+  if num_piles = g1u2u 0u then
+    g1u2u 1u
+  else
+    let
+      macdef lt = patience_sort$lt<a>
+
+      fun
+      loop {j, k       : nat | j <= k; k < num_piles}
+           .<k - j>.
+           (arr        : &RD(array (a, n)),
+            last_elems : &array (link_t (tk, n), n_last_elems),
+            j          : g1uint (tk, j),
+            k          : g1uint (tk, k))
+          :<> [i : pos | i <= num_piles + 1]
+              g1uint (tk, i) =
+        if j = k then
+          begin
+            if succ j <> num_piles then
+              num_piles - j
+            else
+              let
+                stadef j0 = num_piles - 1 - j
+                val j0 : g1uint (tk, j0) = pred num_piles - j
+
+                val [last_elems_j0 : int]
+                    last_elems_j0 = last_elems[j0]
+                val () =
+                  $effmask_exn assertloc (last_elems_j0 <> g1u2u 0u)
+
+                stadef i1 = q - 1
+                stadef i2 = last_elems_j0 - 1
+                val i1 = pred q
+                and i2 = pred last_elems_j0
+
+                val () = $effmask_exn assertloc (i1 <> i2)
+
+                prval @(pfelem1, pfelem2, fpf) =
+                  array_v_takeout_two
+                    {a} {..} {n} {i1, i2} (view@ arr)
+
+                val x1_lt_x2 =
+                  (!(ptr_add<a> (addr@ arr, i1)))
+                    \lt (!(ptr_add<a> (addr@ arr, i2)))
+(* val () = $effmask_all println! ("branch for last_elems possible increase in num_piles") *)
+(* val () = $effmask_all println! ("  x1 = ", $UNSAFE.ptr0_get<int> (ptr_add<a> (addr@ arr, i1))) *)
+(* val () = $effmask_all println! ("  x2 = ", $UNSAFE.ptr0_get<int> (ptr_add<a> (addr@ arr, i2))) *)
+(* val () = $effmask_all println! ("  x1_lt_x2 = ", x1_lt_x2) *)
+
+                prval () = view@ arr := fpf (pfelem1, pfelem2)
+              in
+                if x1_lt_x2 then
+                  succ num_piles
+                else
+                  g1u2u 1u
+              end
+          end
+        else
+          let
+            typedef index (i : int) = [0 <= i; i < n] g1uint (tk, i)
+            typedef index = [i : int] index i
+
+            stadef i = j + ((k - j) / 2)
+            val i : g1uint (tk, i) = j + half (k - j)
+
+            stadef j0 = num_piles - 1 - j
+            val j0 : g1uint (tk, j0) = pred num_piles - j
+
+            val [last_elems_j0 : int] last_elems_j0 = last_elems[j0]
+            val () =
+              $effmask_exn assertloc (last_elems_j0 <> g1u2u 0u)
+
+            stadef i1 = q - 1
+            stadef i2 = last_elems_j0 - 1
+            val i1 = pred q
+            and i2 = pred last_elems_j0
+
+            val () = $effmask_exn assertloc (i1 <> i2)
+
+            prval @(pfelem1, pfelem2, fpf) =
+              array_v_takeout_two {a} {..} {n} {i1, i2} (view@ arr)
+
+            val x1_lt_x2 =
+              (!(ptr_add<a> (addr@ arr, i1)))
+                \lt (!(ptr_add<a> (addr@ arr, i2)))
+(* val () = $effmask_all println! ("branch for last_elems looping") *)
+(* val () = $effmask_all println! ("  x1 = ", $UNSAFE.ptr0_get<int> (ptr_add<a> (addr@ arr, i1))) *)
+(* val () = $effmask_all println! ("  x2 = ", $UNSAFE.ptr0_get<int> (ptr_add<a> (addr@ arr, i2))) *)
+(* val () = $effmask_all println! ("  x1_lt_x2 = ", x1_lt_x2) *)
+
+            prval () = view@ arr := fpf (pfelem1, pfelem2)
+          in
+            if x1_lt_x2 then
+              loop (arr, last_elems, succ i, k)
+            else
+              loop (arr, last_elems, j, i)
+          end
+    in
+      loop (arr, last_elems, g1u2u 0u, pred num_piles)
     end
 
 implement {a} {tk}
@@ -265,20 +402,29 @@ patience_sort_deal_refparams
       array_v_split {link_t} {..} {n + n} {n} pf_wspace
 
     fun
-    loop {q         : nat | q <= n}
-         {m         : nat | m <= n}
+    loop {q             : nat | q <= n}
+         {m             : nat | m <= n}
+         {p_last_elems  : addr}
+         {p_tails       : addr}
          .<q>.
-         (arr       : &RD(array (a, n)),
-          q         : g1uint (tk, q),
-          piles     : &array (link_t, n) >> _,
-          links     : &array (link_t, n) >> _,
-          m         : g1uint (tk, m))
+         (pf_last_elems : !array_v (link_t, p_last_elems, n) >> _,
+          pf_tails      : !array_v (link_t, p_tails, n) >> _ |
+          arr           : &RD(array (a, n)),
+          q             : g1uint (tk, q),
+          piles         : &array (link_t, n) >> _,
+          links         : &array (link_t, n) >> _,
+          p_last_elems  : ptr p_last_elems,
+          p_tails       : ptr p_tails,
+          m             : g1uint (tk, m))
         :<!wrt> [num_piles : nat | num_piles <= n]
                 g1uint (tk, num_piles) =
       if q = zero then
         m
       else
         let
+          macdef last_elems = !p_last_elems
+          macdef tails = !p_tails
+
           val i = find_pile<a><tk> {n} (arr, m, piles, q)
 
           (* We have no proof the number of elements will not exceed
@@ -287,18 +433,53 @@ patience_sort_deal_refparams
              a "proof" by runtime check. *)
           val () = $effmask_exn assertloc (i <= n)
         in
-          links[pred q] := piles[pred i];
-          piles[pred i] := q;
           if i = succ m then
-            loop {q - 1} (arr, pred q, piles, links, succ m)
+            let
+              val i =
+                find_last_elem<a><tk> {n} (arr, m, last_elems, q)
+              val () = $effmask_exn assertloc (i <= n)
+            in
+              if i = succ m then
+                begin           (* Start a new pile. *)
+                  piles[pred i] := q;
+                  last_elems[pred i] := q;
+                  tails[pred i] := q;
+                  loop (pf_last_elems, pf_tails |
+                        arr, pred q, piles, links,
+                        p_last_elems, p_tails, succ m)
+                end
+              else
+                let             (* Append to the end of a pile. *)
+                  val i0 = tails[pred i]
+                  val () = $effmask_exn assertloc (i0 <> g1u2u 0u)
+                in
+                  links[pred i0] := q;
+                  last_elems[pred i] := q;
+                  tails[pred i] := q;
+(* $effmask_all println! ("q = ", $UNSAFE.cast{uint} q); *)
+(* $effmask_all println! ("i = ", $UNSAFE.cast{uint} i); *)
+(* $effmask_all println! ("i0 = ", $UNSAFE.cast{uint} i0); *)
+                  loop (pf_last_elems, pf_tails |
+                        arr, pred q, piles, links,
+                        p_last_elems, p_tails, m)
+                end
+            end
           else
-            loop {q - 1} (arr, pred q, piles, links, m)
+            begin             (* Cons onto the beginning of a pile. *)
+              links[pred q] := piles[pred i];
+              piles[pred i] := q;
+              loop (pf_last_elems, pf_tails |
+                    arr, pred q, piles, links,
+                    p_last_elems, p_tails, m)
+            end
         end
 
     val () = array_initize_elt<link_t> (piles, g1u2u n, link_nil)
     val () = array_initize_elt<link_t> (links, g1u2u n, link_nil)
 
-    val num_piles = loop (arr, n, piles, links, zero)
+    val num_piles = loop (pf_last_elems, pf_tails |
+                          arr, n, piles, links,
+                          p_last_elems, p_tails, zero)
 
     prval pf_wspace = array_v_unsplit (pf_last_elems, pf_tails)
     prval () = array_v_uninitize_without_doing_anything pf_wspace
