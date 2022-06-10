@@ -25,19 +25,19 @@
 
 staload "patience-sort/SATS/patience-sort.sats"
 
-stadef index_t (ifirst : int, len : int, i : int) =
-  patience_sort_index_t (ifirst, len, i)
-typedef index_t (tk : tkind, ifirst : int, len : int, i : int) =
-  patience_sort_index_t (tk, ifirst, len, i)
-typedef index_t (tk : tkind, ifirst : int, len : int) =
-  patience_sort_index_t (tk, ifirst, len)
+stadef index_t (len : int, i : int) =
+  patience_sort_index_t (len, i)
+typedef index_t (tk : tkind, len : int, i : int) =
+  patience_sort_index_t (tk, len, i)
+typedef index_t (tk : tkind, len : int) =
+  patience_sort_index_t (tk, len)
 
-stadef link_t (ifirst : int, len : int, i : int) =
-  patience_sort_link_t (ifirst, len, i)
-typedef link_t (tk : tkind, ifirst : int, len : int, i : int) =
-  patience_sort_link_t (tk, ifirst, len, i)
-typedef link_t (tk : tkind, ifirst : int, len : int) =
-  patience_sort_link_t (tk, ifirst, len)
+stadef link_t (len : int, i : int) =
+  patience_sort_link_t (len, i)
+typedef link_t (tk : tkind, len : int, i : int) =
+  patience_sort_link_t (tk, len, i)
+typedef link_t (tk : tkind, len : int) =
+  patience_sort_link_t (tk, len)
 
 extern praxi
 array_v_takeout_two
@@ -127,17 +127,15 @@ next_power_of_two {i} (i) =
 
 fn {a  : vt@ype}
    {tk : tkind}
-find_pile {ifirst, len : int}
-          {n           : int | ifirst + len <= n}
-          {num_piles   : nat | num_piles <= len}
-          {n_piles     : int | len <= n_piles}
-          {q           : pos | q <= len}
-          (ifirst      : g1uint (tk, ifirst),
-           arr         : &RD(array (a, n)),
-           num_piles   : g1uint (tk, num_piles),
-           piles       : &RD(array (link_t (tk, ifirst, len),
-                                    n_piles)),
-           q           : g1uint (tk, q))
+find_pile {n         : int}
+          {len       : int | len <= n}
+          {num_piles : nat | num_piles <= len}
+          {n_piles   : int | len <= n_piles}
+          {q         : pos | q <= len}
+          (arr       : &RD(array (a, n)),
+           num_piles : g1uint (tk, num_piles),
+           piles     : &RD(array (link_t (tk, len), n_piles)),
+           q         : g1uint (tk, q))
     :<> [i : pos | i <= num_piles + 1]
         g1uint (tk, i) =
   (*
@@ -160,14 +158,11 @@ find_pile {ifirst, len : int}
     let
       macdef lt = patience_sort$lt<a>
 
-      prval () = lemma_g1uint_param ifirst
-      prval () = prop_verify {0 <= ifirst} ()
-
       fun
       loop {j, k  : nat | j <= k; k < num_piles}
            .<k - j>.
            (arr   : &RD(array (a, n)),
-            piles : &array (link_t (tk, ifirst, len), n_piles),
+            piles : &array (link_t (tk, len), n_piles),
             j     : g1uint (tk, j),
             k     : g1uint (tk, k))
           :<> [i : pos | i <= num_piles + 1]
@@ -181,10 +176,10 @@ find_pile {ifirst, len : int}
                 val [piles_j : int] piles_j = piles[j]
                 val () = $effmask_exn assertloc (piles_j <> g1u2u 0u)
 
-                stadef i1 = (q - 1) + ifirst
-                stadef i2 = (piles_j - 1) + ifirst
-                val i1 = pred q + ifirst
-                and i2 = pred piles_j + ifirst
+                stadef i1 = q - 1
+                stadef i2 = piles_j - 1
+                val i1 = pred q
+                and i2 = pred piles_j
 
                 val () = $effmask_exn assertloc (i1 <> i2)
 
@@ -215,10 +210,10 @@ find_pile {ifirst, len : int}
             val [piles_j : int] piles_j = piles[j]
             val () = $effmask_exn assertloc (piles_j <> g1u2u 0u)
 
-            stadef i1 = (q - 1) + ifirst
-            stadef i2 = (piles_j - 1) + ifirst
-            val i1 = pred q + ifirst
-            and i2 = pred piles_j + ifirst
+            stadef i1 = q - 1
+            stadef i2 = piles_j - 1
+            val i1 = pred q
+            and i2 = pred piles_j
 
             val () = $effmask_exn assertloc (i1 <> i2)
 
@@ -242,18 +237,16 @@ find_pile {ifirst, len : int}
 
 implement {a} {tk}
 patience_sort_deal_refparams
-          {ifirst, len} {n}
-          (ifirst, len, arr, piles, links) =
+          {n} {len} (arr, len, piles, links) =
   (*
     Dealing is done backwards through the arr array, so an array
     already sorted in the desired order will result in a single pile.
   *)
   let
-    prval () = lemma_g1uint_param ifirst
     prval () = lemma_g1uint_param len
 
-    typedef link_t (i : int) = link_t (tk, ifirst, len, i)
-    typedef link_t = link_t (tk, ifirst, len)
+    typedef link_t (i : int) = link_t (tk, len, i)
+    typedef link_t = link_t (tk, len)
 
     val zero : g1uint (tk, 0) = g1u2u 0u
     val one : g1uint (tk, 1) = g1u2u 1u
@@ -274,7 +267,7 @@ patience_sort_deal_refparams
         m
       else
         let
-          val i = find_pile {ifirst, len} (ifirst, arr, m, piles, q)
+          val i = find_pile<a><tk> {n} {len} (arr, m, piles, q)
 
           (* We have no proof the number of elements will not exceed
              storage. However, we know it will not, because the number
@@ -297,33 +290,30 @@ patience_sort_deal_refparams
 
 implement {a} {tk}
 patience_sort_deal_valparams
-          {ifirst, len} {n}
+          {len} {n}
           (pf_piles, pf_links |
-           ifirst, len, arr, p_piles, p_links) =
+           len, arr, p_piles, p_links) =
   patience_sort_deal_refparams<a><tk>
-    {ifirst, len} {n} (ifirst, len, arr, !p_piles, !p_links)
+    {len} {n} (len, arr, !p_piles, !p_links)
 
 fn {a  : vt@ype}
    {tk : tkind}
 k_way_merge_refparams
-          {ifirst, len : int}
-          {n           : int | ifirst + len <= n}
-          {num_piles   : pos | num_piles <= len}
-          {power       : int | num_piles <= power}
-          (pf_exp2     : [exponent : nat] EXP2 (exponent, power) |
-           arr         : &RD(array (a, n)),
-           ifirst      : g1uint (tk, ifirst),
-           len         : g1uint (tk, len),
-           num_piles   : g1uint (tk, num_piles),
-           power       : g1uint (tk, power),
-           piles       : &array (link_t (tk, ifirst, len), len) >> _,
-           links       : &RD(array (link_t (tk, ifirst, len), len)),
-           winvals     : &array (link_t (tk, ifirst, len)?, 2 * power)
-                            >> _,
-           winlinks    : &array (link_t (tk, ifirst, len)?, 2 * power)
-                            >> _,
-           sorted      : &array (index_t (tk, ifirst, len)?, len)
-                            >> array (index_t (tk, ifirst, len), len))
+          {n         : int}
+          {len       : int | len <= n}
+          {num_piles : pos | num_piles <= len}
+          {power     : int | num_piles <= power}
+          (pf_exp2   : [exponent : nat] EXP2 (exponent, power) |
+           arr       : &RD(array (a, n)),
+           len       : g1uint (tk, len),
+           num_piles : g1uint (tk, num_piles),
+           power     : g1uint (tk, power),
+           piles     : &array (link_t (tk, len), len) >> _,
+           links     : &RD(array (link_t (tk, len), len)),
+           winvals   : &array (link_t (tk, len)?, 2 * power) >> _,
+           winlinks  : &array (link_t (tk, len)?, 2 * power) >> _,
+           sorted    : &array (index_t (tk, len)?, len)
+                       >> array (index_t (tk, len), len))
     :<!wrt> void =
   (*
     k-way merge by tournament tree.
@@ -343,16 +333,15 @@ k_way_merge_refparams
     val one : g1uint (tk, 1) = g1u2u 1u
     val two : g1uint (tk, 2) = g1u2u 2u
 
-    prval () = lemma_g1uint_param ifirst
     prval () = lemma_g1uint_param len
 
-    typedef link_t (i : int) = link_t (tk, ifirst, len, i)
-    typedef link_t = link_t (tk, ifirst, len)
+    typedef link_t (i : int) = link_t (tk, len, i)
+    typedef link_t = link_t (tk, len)
 
     val link_nil : link_t 0 = zero
 
-    typedef index_t (i : int) = index_t (tk, ifirst, len, i)
-    typedef index_t = index_t (tk, ifirst, len)
+    typedef index_t (i : int) = index_t (tk, len, i)
+    typedef index_t = index_t (tk, len)
 
     val [total_external_nodes : int]
         @(_ | total_external_nodes) = next_power_of_two num_piles
@@ -492,10 +481,10 @@ k_way_merge_refparams
           i
         else
           let
-            stadef i1 = (winner_i - 1) + ifirst
-            stadef i2 = (winner_j - 1) + ifirst
-            val i1 = pred winner_i + ifirst
-            and i2 = pred winner_j + ifirst
+            stadef i1 = winner_i - 1
+            stadef i2 = winner_j - 1
+            val i1 = pred winner_i
+            and i2 = pred winner_j
             prval () = lemma_g1uint_param i1
             prval () = lemma_g1uint_param i2
 
@@ -595,7 +584,7 @@ k_way_merge_refparams
           prval @(pf_elem, pf_rest) = array_v_uncons pf_sorted
           val winner = winvals[1]
           val () = $effmask_exn assertloc (winner <> link_nil)
-          val () = !p_sorted := pred winner + ifirst
+          val () = !p_sorted := pred winner
 
           (* Move to the next element in the winner's pile. *)
           val ilink = winlinks[1]
@@ -641,8 +630,8 @@ k_way_merge_refparams
 fn {a  : vt@ype}
    {tk : tkind}
 k_way_merge_valparams
-          {ifirst, len : int}
-          {n           : int | ifirst + len <= n}
+          {n           : int}
+          {len         : int | len <= n}
           {num_piles   : pos | num_piles <= len}
           {power       : int | num_piles <= power}
           {p_piles     : addr}
@@ -650,16 +639,15 @@ k_way_merge_valparams
           {p_winvals   : addr}
           {p_winlinks  : addr}
           (pf_exp2     : [exponent : nat] EXP2 (exponent, power),
-           pf_piles    : !array_v (link_t (tk, ifirst, len),
-                                   p_piles, len) >> _,
-           pf_links    : !array_v (link_t (tk, ifirst, len),
-                                   p_links, len) >> _,
-           pf_winvals  : !array_v (link_t (tk, ifirst, len)?,
-                                   p_winvals, 2 * power) >> _,
-           pf_winlinks : !array_v (link_t (tk, ifirst, len)?,
-                                   p_winlinks, 2 * power) >> _ |
+           pf_piles    : !array_v (link_t (tk, len), p_piles, len)
+                         >> _,
+           pf_links    : !array_v (link_t (tk, len), p_links, len)
+                         >> _,
+           pf_winvals  : !array_v (link_t (tk, len)?, p_winvals,
+                                   2 * power) >> _,
+           pf_winlinks : !array_v (link_t (tk, len)?, p_winlinks,
+                                   2 * power) >> _ |
            arr         : &RD(array (a, n)),
-           ifirst      : g1uint (tk, ifirst),
            len         : g1uint (tk, len),
            num_piles   : g1uint (tk, num_piles),
            power       : g1uint (tk, power),
@@ -667,36 +655,34 @@ k_way_merge_valparams
            p_links     : ptr p_links,
            p_winvals   : ptr p_winvals,
            p_winlinks  : ptr p_winlinks,
-           sorted      : &array (index_t (tk, ifirst, len)?, len)
-                          >> array (index_t (tk, ifirst, len), len))
+           sorted      : &array (index_t (tk, len)?, len)
+                         >> array (index_t (tk, len), len))
     :<!wrt> void =
   k_way_merge_refparams<a><tk>
-    {ifirst, len} {n} {num_piles} {power}
+    {n} {len} {num_piles} {power}
     (pf_exp2 |
-     arr, ifirst, len, num_piles, power,
+     arr, len, num_piles, power,
      !p_piles, !p_links, !p_winvals, !p_winlinks, sorted)
 
 implement {a} {tk}
 patience_sort_merge_refparams
-          {ifirst, len} {n} {num_piles} {power} {n_workspace}
           (pf_exp2 |
-           arr, ifirst, len, num_piles, power, piles, links,
+           arr, len, num_piles, power, piles, links,
            workspace, sorted) =
   patience_sort_merge_valparams<a><tk>
-    {ifirst, len} {n} {num_piles} {power} {n_workspace}
     (pf_exp2, view@ piles, view@ links, view@ workspace |
-     arr, ifirst, len, num_piles, power,
+     arr, len, num_piles, power,
      addr@ piles, addr@ links, addr@ workspace, sorted)
 
 implement {a} {tk}
 patience_sort_merge_valparams
-          {ifirst, len} {n} {num_piles} {power} {n_workspace}
+          {n} {len} {num_piles} {power} {n_workspace}
           {p_piles} {p_links} {p_workspace}
           (pf_exp2, pf_piles, pf_links, pf_workspace |
-           arr, ifirst, len, num_piles, power, p_piles, p_links,
+           arr, len, num_piles, power, p_piles, p_links,
            p_workspace, sorted) =
   let
-    typedef link_t = link_t (tk, ifirst, len)
+    typedef link_t = link_t (tk, len)
 
     prval @(pf_winvals_and_winlinks, pf_rest) =
       array_v_split {link_t?} {p_workspace} {n_workspace} {4 * power}
@@ -710,7 +696,7 @@ patience_sort_merge_valparams
     val () =
       k_way_merge_valparams<a><tk>
         (pf_exp2, pf_piles, pf_links, pf_winvals, pf_winlinks |
-         arr, ifirst, len, num_piles, power, p_piles, p_links,
+         arr, len, num_piles, power, p_piles, p_links,
          p_winvals, p_winlinks, sorted)
 
     prval pf_winvals_and_winlinks =
@@ -748,25 +734,23 @@ end
 
 implement {a} {tk}
 patience_sort_with_its_own_workspace
-          {ifirst, len} {n} (arr, ifirst, len, sorted) =
+          {n} {len} (arr, len, sorted) =
   let
     val zero : g1uint (tk, 0) = g1u2u 0u
     val four : g1uint (tk, 4) = g1u2u 4u
 
-    prval () = lemma_g1uint_param ifirst
     prval () = lemma_g1uint_param len
 
-    typedef index_t = index_t (tk, ifirst, len)
-    typedef link_t = link_t (tk, ifirst, len)
+    typedef index_t = index_t (tk, len)
+    typedef link_t = link_t (tk, len)
 
     fn
     deal {p_piles     : addr}
          {p_links     : addr}
          (pf_piles    : !array_v (link_t?, p_piles, len)
-                           >> array_v (link_t, p_piles, len),
+                        >> array_v (link_t, p_piles, len),
           pf_links    : !array_v (link_t?, p_links, len)
-                           >> array_v (link_t, p_links, len) |
-          ifirst      : g1uint (tk, ifirst),
+                        >> array_v (link_t, p_links, len) |
           len         : g1uint (tk, len),
           arr         : &RD(array (a, n)),
           p_piles     : ptr p_piles,
@@ -774,7 +758,7 @@ patience_sort_with_its_own_workspace
         :<!wrt> [num_piles : int | num_piles <= len]
                 g1uint (tk, num_piles) =
       patience_sort_deal<a><tk>
-        (pf_piles, pf_links | ifirst, len, arr, p_piles, p_links)
+        (pf_piles, pf_links | arr, len, p_piles, p_links)
 
     fn
     merge {num_piles    : pos | num_piles <= len}
@@ -789,7 +773,6 @@ patience_sort_with_its_own_workspace
            pf_workspace : !array_v (link_t?, p_workspace,
                                     n_workspace) >> _ |
            arr          : &RD(array (a, n)),
-           ifirst       : g1uint (tk, ifirst),
            len          : g1uint (tk, len),
            num_piles    : g1uint (tk, num_piles),
            power        : g1uint (tk, power),
@@ -801,7 +784,7 @@ patience_sort_with_its_own_workspace
         :<!wrt> void =
       patience_sort_merge<a><tk>
         (pf_exp2, pf_piles, pf_links, pf_workspace |
-         arr, ifirst, len, num_piles, power, p_piles, p_links,
+         arr, len, num_piles, power, p_piles, p_links,
          p_workspace, sorted)
   in
     if len = zero then
@@ -826,7 +809,7 @@ patience_sort_with_its_own_workspace
 
         val num_piles =
           deal (pf_piles, pf_links |
-                ifirst, len, arr, addr@ piles, addr@ links)
+                len, arr, addr@ piles, addr@ links)
 
         prval () = lemma_g1uint_param num_piles
         val () = $effmask_exn assertloc (num_piles <> zero)
@@ -836,7 +819,7 @@ patience_sort_with_its_own_workspace
 
         val () =
           merge (pf_exp2, pf_piles, pf_links, view@ workspace |
-                 arr, ifirst, len, num_piles, power,
+                 arr, len, num_piles, power,
                  addr@ piles, addr@ links, addr@ workspace, sorted)
 
         prval () = array_v_uninitize_without_doing_anything pf_piles
@@ -858,7 +841,7 @@ patience_sort_with_its_own_workspace
 
         val num_piles =
           deal (pf_piles, pf_links |
-                ifirst, len, arr, p_piles, p_links)
+                len, arr, p_piles, p_links)
 
         prval () = lemma_g1uint_param num_piles
         val () = $effmask_exn assertloc (num_piles <> zero)
@@ -868,7 +851,7 @@ patience_sort_with_its_own_workspace
           array_ptr_alloc<link_t> (g1u2u (four * power))
       in
         merge (pf_exp2, pf_piles, pf_links, pf_workspace |
-               arr, ifirst, len, num_piles, power,
+               arr, len, num_piles, power,
                p_piles, p_links, p_workspace, sorted);
 
         array_ptr_free (pf_piles, pfgc_piles | p_piles);

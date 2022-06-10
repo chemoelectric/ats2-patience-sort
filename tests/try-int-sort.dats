@@ -54,36 +54,29 @@ main0 () =
       $list (2, 4, 8, 15, 22, 22, 37, 38, 46, 48, 49, 53, 54, 54, 58,
              70, 72, 76, 80, 82, 84, 86, 90, 93, 98)
 
-    val ifirst = 10u
     val [len : int] len = find_length example_list
 
     #define ARRSZ 100
-    val () = assertloc (10u + len <= ARRSZ)
+    val () = assertloc (len <= ARRSZ)
 
     var arr : array (int, ARRSZ)
     val () = array_initize_elt<int> (arr, i2sz ARRSZ, 0)
 
     prval @(pf_left, pf_right) =
-      array_v_split {int} {..} {ARRSZ} {10} (view@ arr)
-    prval @(pf_middle, pf_right) =
-      array_v_split {int} {..} {90} {len} pf_right
-
-    val p = ptr_add<int> (addr@ arr, 10)
-    val () = array_copy_from_list<int> (!p, example_list)
-
-    prval pf_right = array_v_unsplit (pf_middle, pf_right)
+      array_v_split {int} {..} {ARRSZ} {len} (view@ arr)
+    val () = array_copy_from_list<int> (!(addr@ arr), example_list)
     prval () = view@ arr := array_v_unsplit (pf_left, pf_right)
 
-    typedef index_t = patience_sort_index_t (uint_kind, 10, len)
+    typedef index_t = patience_sort_index_t (uint_kind, len)
 
     var sorted : array (index_t, ARRSZ)
-    val () = array_initize_elt<index_t> (sorted, i2sz ARRSZ, 10u)
+    val () = array_initize_elt<index_t> (sorted, i2sz ARRSZ, 0u)
     
     prval @(sorted_left, sorted_right) =
       array_v_split {index_t} {..} {ARRSZ} {len} (view@ sorted)
     prval () = view@ sorted := sorted_left
 
-    val () = patience_sort<int> (arr, 10u, len, sorted)
+    val () = patience_sort<int> (arr, len, sorted)
 
     prval () = view@ sorted :=
       array_v_unsplit (view@ sorted, sorted_right)
