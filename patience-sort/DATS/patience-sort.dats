@@ -251,6 +251,19 @@ patience_sort_deal_refparams
     val one : g1uint (tk, 1) = g1u2u 1u
     val link_nil : link_t 0 = g1u2u 0u
 
+    val p_last_elems = addr@ workspace
+    and p_tails = ptr_add<link_t> (addr@ workspace, n)
+    macdef last_elems = !p_last_elems
+    macdef tails = !p_tails
+
+    prval @(pf_wspace, pf_leftover_space) =
+      array_v_split {link_t?} {..} {n_workspace} {n + n}
+                    (view@ workspace)
+    val () = array_initize_elt<link_t> (!(addr@ workspace),
+                                        g1u2u (n + n), link_nil)
+    prval @(pf_last_elems, pf_tails) =
+      array_v_split {link_t} {..} {n + n} {n} pf_wspace
+
     fun
     loop {q         : nat | q <= n}
          {m         : nat | m <= n}
@@ -281,10 +294,18 @@ patience_sort_deal_refparams
           else
             loop {q - 1} (arr, pred q, piles, links, m)
         end
+
+    val () = array_initize_elt<link_t> (piles, g1u2u n, link_nil)
+    val () = array_initize_elt<link_t> (links, g1u2u n, link_nil)
+
+    val num_piles = loop (arr, n, piles, links, zero)
+
+    prval pf_wspace = array_v_unsplit (pf_last_elems, pf_tails)
+    prval () = array_v_uninitize_without_doing_anything pf_wspace
+    prval () = view@ workspace :=
+      array_v_unsplit (pf_wspace, pf_leftover_space)
   in
-    array_initize_elt<link_t> (piles, g1u2u n, link_nil);
-    array_initize_elt<link_t> (links, g1u2u n, link_nil);
-    loop (arr, n, piles, links, zero)
+    num_piles
   end
 
 implement {a} {tk}
