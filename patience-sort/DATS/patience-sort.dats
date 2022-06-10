@@ -375,8 +375,20 @@ implement {a} {tk}
 patience_sort_deal_refparams
           {n} {n_workspace} (arr, n, piles, links, workspace) =
   (*
+
+    I borrow, from the following paper, the trick of building on both
+    sides of a pile:
+
+      Badrish Chandramouli and Jonathan Goldstein, ‘Patience is a
+        virtue: revisiting merge and sort on modern processors’,
+        SIGMOD ’14: Proceedings of the 2014 ACM SIGMOD International
+        Conference on Management of Data, June 2014, 731–742.
+        https://doi.org/10.1145/2588555.2593662
+
     Dealing is done backwards through the arr array, so an array
-    already sorted in the desired order will result in a single pile.
+    already sorted in the desired order will result in a single pile
+    with just consing.
+
   *)
   let
     prval () = lemma_g1uint_param n
