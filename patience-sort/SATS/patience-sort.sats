@@ -19,7 +19,6 @@
 #define ATS_PACKNAME "ats2-patience-sort"
 #define ATS_EXTERN_PREFIX "ats2_patience_sort_"
 
-(* An index into the part of the input array to be sorted. *)
 stadef patience_sort_index_t (n : int, i : int) =
   n == 0 || (0 <= i && i < n)
 typedef patience_sort_index_t (tk : tkind, n : int, i : int) =
@@ -29,7 +28,7 @@ typedef patience_sort_index_t (tk : tkind, n : int) =
   [i : int]
   patience_sort_index_t (tk, n, i)
 
-(* A type used in temporary workspaces. *)
+(* A type used in intermediate calculations. *)
 stadef patience_sort_link_t (n : int, i : int) =
   0 <= i && i <= n
 typedef patience_sort_link_t (tk : tkind, n : int, i : int) =
@@ -55,30 +54,38 @@ in
   fn {a  : vt@ype}
      {tk : tkind}
   patience_sort_deal_refparams
-            {n     : int}
-            (arr   : &RD(array (a, n)),
-             n     : g1uint (tk, n),
-             piles : &array (link_t (tk, n)?, n)
-                      >> array (link_t (tk, n), n),
-             links : &array (link_t (tk, n)?, n)
-                      >> array (link_t (tk, n), n))
+            {n           : int}
+            {n_workspace : int | 2 * n <= n_workspace}
+            (arr         : &RD(array (a, n)),
+             n           : g1uint (tk, n),
+             piles       : &array (link_t (tk, n)?, n)
+                            >> array (link_t (tk, n), n),
+             links       : &array (link_t (tk, n)?, n)
+                            >> array (link_t (tk, n), n),
+             workspace   : &array (link_t (tk, n)?,
+                                   n_workspace) >> _)
       :<!wrt> [num_piles : int | num_piles <= n]
               g1uint (tk, num_piles)
 
   fn {a  : vt@ype}
      {tk : tkind}
   patience_sort_deal_valparams
-            {n        : int}
-            {p_piles  : addr}
-            {p_links  : addr}
-            (pf_piles : !array_v (link_t (tk, n)?, p_piles, n)
-                        >> array_v (link_t (tk, n), p_piles, n),
-             pf_links : !array_v (link_t (tk, n)?, p_links, n)
-                        >> array_v (link_t (tk, n), p_links, n) |
-             arr      : &RD(array (a, n)),
-             n        : g1uint (tk, n),
-             p_piles  : ptr p_piles,
-             p_links  : ptr p_links)
+            {n            : int}
+            {n_workspace  : int | 2 * n <= n_workspace}
+            {p_piles      : addr}
+            {p_links      : addr}
+            {p_workspace  : addr}
+            (pf_piles     : !array_v (link_t (tk, n)?, p_piles, n)
+                            >> array_v (link_t (tk, n), p_piles, n),
+             pf_links     : !array_v (link_t (tk, n)?, p_links, n)
+                            >> array_v (link_t (tk, n), p_links, n),
+             pf_workspace : !array_v (link_t (tk, n)?, p_workspace,
+                                      n_workspace) >> _ |
+             arr          : &RD(array (a, n)),
+             n            : g1uint (tk, n),
+             p_piles      : ptr p_piles,
+             p_links      : ptr p_links,
+             p_workspace  : ptr p_workspace)
       :<!wrt> [num_piles : int | num_piles <= n]
               g1uint (tk, num_piles)
 

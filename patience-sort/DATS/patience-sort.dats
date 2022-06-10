@@ -236,7 +236,7 @@ find_pile {n         : int}
 
 implement {a} {tk}
 patience_sort_deal_refparams
-          {n} (arr, n, piles, links) =
+          {n} {n_workspace} (arr, n, piles, links, workspace) =
   (*
     Dealing is done backwards through the arr array, so an array
     already sorted in the desired order will result in a single pile.
@@ -289,8 +289,10 @@ patience_sort_deal_refparams
 
 implement {a} {tk}
 patience_sort_deal_valparams
-          (pf_piles, pf_links | n, arr, p_piles, p_links) =
-  patience_sort_deal_refparams<a><tk> (n, arr, !p_piles, !p_links)
+          (pf_piles, pf_links, pf_workspace |
+           n, arr, p_piles, p_links, p_workspace) =
+  patience_sort_deal_refparams<a><tk> (n, arr, !p_piles, !p_links,
+                                       !p_workspace)
 
 fn {a  : vt@ype}
    {tk : tkind}
@@ -729,6 +731,7 @@ patience_sort_with_its_own_workspace
           {n} (arr, n, sorted) =
   let
     val zero : g1uint (tk, 0) = g1u2u 0u
+    val two : g1uint (tk, 2) = g1u2u 2u
     val four : g1uint (tk, 4) = g1u2u 4u
 
     prval () = lemma_g1uint_param n
@@ -737,20 +740,26 @@ patience_sort_with_its_own_workspace
     typedef link_t = link_t (tk, n)
 
     fn
-    deal {p_piles     : addr}
+    deal {n_workspace : int | 2 * n <= n_workspace}
+         {p_piles     : addr}
          {p_links     : addr}
+         {p_workspace : addr}
          (pf_piles    : !array_v (link_t?, p_piles, n)
                         >> array_v (link_t, p_piles, n),
           pf_links    : !array_v (link_t?, p_links, n)
-                        >> array_v (link_t, p_links, n) |
+                        >> array_v (link_t, p_links, n),
+          pf_workspace : !array_v (link_t?, p_workspace,
+                                   n_workspace) >> _ |
           n           : g1uint (tk, n),
           arr         : &RD(array (a, n)),
           p_piles     : ptr p_piles,
-          p_links     : ptr p_links)
+          p_links     : ptr p_links,
+          p_workspace : ptr p_workspace)
         :<!wrt> [num_piles : int | num_piles <= n]
                 g1uint (tk, num_piles) =
       patience_sort_deal<a><tk>
-        (pf_piles, pf_links | arr, n, p_piles, p_links)
+        (pf_piles, pf_links, pf_workspace |
+         arr, n, p_piles, p_links, p_workspace)
 
     fn
     merge {num_piles    : pos | num_piles <= n}
@@ -800,8 +809,8 @@ patience_sort_with_its_own_workspace
                         (view@ links)
 
         val num_piles =
-          deal (pf_piles, pf_links |
-                n, arr, addr@ piles, addr@ links)
+          deal (pf_piles, pf_links, view@ workspace |
+                n, arr, addr@ piles, addr@ links, addr@ workspace)
 
         prval () = lemma_g1uint_param num_piles
         val () = $effmask_exn assertloc (num_piles <> zero)
@@ -831,23 +840,45 @@ patience_sort_with_its_own_workspace
         val @(pf_links, pfgc_links | p_links) =
           array_ptr_alloc<link_t> (g1u2u n)
 
+        val @(pf_workspace, pfgc_workspace | p_workspace) =
+          array_ptr_alloc<link_t> (g1u2u (two * n))
+
         val num_piles =
-          deal (pf_piles, pf_links | n, arr, p_piles, p_links)
+          deal (pf_piles, pf_links, pf_workspace |
+                n, arr, p_piles, p_links, p_workspace)
 
         prval () = lemma_g1uint_param num_piles
         val () = $effmask_exn assertloc (num_piles <> zero)
 
         val @(pf_exp2 | power) = next_power_of_two<tk> num_piles
-        val @(pf_workspace, pfgc_workspace | p_workspace) =
-          array_ptr_alloc<link_t> (g1u2u (four * power))
       in
-        merge (pf_exp2, pf_piles, pf_links, pf_workspace |
-               arr, n, num_piles, power,
-               p_piles, p_links, p_workspace, sorted);
+        if four * power <= two * g1u2u n then
+          begin
+            merge (pf_exp2, pf_piles, pf_links, pf_workspace |
+                   arr, n, num_piles, power,
+                   p_piles, p_links, p_workspace, sorted);
 
-        array_ptr_free (pf_piles, pfgc_piles | p_piles);
-        array_ptr_free (pf_links, pfgc_links | p_links);
-        array_ptr_free (pf_workspace, pfgc_workspace | p_workspace)
+            array_ptr_free (pf_piles, pfgc_piles | p_piles);
+            array_ptr_free (pf_links, pfgc_links | p_links);
+            array_ptr_free (pf_workspace, pfgc_workspace |
+                            p_workspace)
+          end
+        else
+          let
+            val () = array_ptr_free (pf_workspace, pfgc_workspace |
+                                     p_workspace)
+            val @(pf_workspace, pfgc_workspace | p_workspace) =
+              array_ptr_alloc<link_t> (g1u2u (four * power))
+          in
+            merge (pf_exp2, pf_piles, pf_links, pf_workspace |
+                   arr, n, num_piles, power,
+                   p_piles, p_links, p_workspace, sorted);
+
+            array_ptr_free (pf_piles, pfgc_piles | p_piles);
+            array_ptr_free (pf_links, pfgc_links | p_links);
+            array_ptr_free (pf_workspace, pfgc_workspace |
+                            p_workspace)
+          end
       end
   end
 
