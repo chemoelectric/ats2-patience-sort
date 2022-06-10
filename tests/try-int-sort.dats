@@ -46,6 +46,8 @@ main0 () =
     patience_sort$lt<int> (x, y) =
       x < y
 
+    #define ARRSZ 100
+
     val example_list =
       $list (22, 15, 98, 82, 22, 4, 58, 70, 80, 38, 49, 48, 46, 54,
              93, 8, 54, 2, 72, 84, 86, 76, 53, 37, 90)
@@ -54,38 +56,37 @@ main0 () =
       $list (2, 4, 8, 15, 22, 22, 37, 38, 46, 48, 49, 53, 54, 54, 58,
              70, 72, 76, 80, 82, 84, 86, 90, 93, 98)
 
-    val [len : int] len = find_length example_list
+    val [n : int] n = find_length example_list
+    val () = assertloc (n <= ARRSZ)
 
-    #define ARRSZ 100
-    val () = assertloc (len <= ARRSZ)
+    typedef index_t = patience_sort_index_t (uint_kind, n)
 
     var arr : array (int, ARRSZ)
     val () = array_initize_elt<int> (arr, i2sz ARRSZ, 0)
 
-    prval @(pf_left, pf_right) =
-      array_v_split {int} {..} {ARRSZ} {len} (view@ arr)
-    val () = array_copy_from_list<int> (!(addr@ arr), example_list)
-    prval () = view@ arr := array_v_unsplit (pf_left, pf_right)
-
-    typedef index_t = patience_sort_index_t (uint_kind, len)
-
     var sorted : array (index_t, ARRSZ)
     val () = array_initize_elt<index_t> (sorted, i2sz ARRSZ, 0u)
-    
+
+    prval @(arr_left, arr_right) =
+      array_v_split {int} {..} {ARRSZ} {n} (view@ arr)
     prval @(sorted_left, sorted_right) =
-      array_v_split {index_t} {..} {ARRSZ} {len} (view@ sorted)
+      array_v_split {index_t} {..} {ARRSZ} {n} (view@ sorted)
+
+    prval () = view@ arr := arr_left
     prval () = view@ sorted := sorted_left
 
-    val () = patience_sort<int> (arr, len, sorted)
+    val () = array_copy_from_list<int> (!(addr@ arr), example_list)
+    val () = patience_sort<int> (arr, n, sorted)
 
+    prval () = view@ arr := array_v_unsplit (view@ arr, arr_right)
     prval () = view@ sorted :=
       array_v_unsplit (view@ sorted, sorted_right)
 
-    var i : [i : nat | i <= len] uint i
+    var i : [i : nat | i <= n] uint i
     var p : List (int) = sorted_list
     prval () = lemma_list_param p
   in
-    for (i := 0u; i <> len; i := succ i)
+    for (i := 0u; i <> n; i := succ i)
       let
         val () = assertloc (isneqz p)
       in
