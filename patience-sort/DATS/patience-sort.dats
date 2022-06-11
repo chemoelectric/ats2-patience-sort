@@ -172,8 +172,6 @@ find_pile {n         : int}
               succ j
             else
               let
-(* val () = $effmask_all println! ("j = ", $UNSAFE.cast{uint} j) *)
-(* val () = $effmask_all println! ("piles[j] = ", $UNSAFE.cast{uint} piles[j]) *)
                 val [piles_j : int] piles_j = piles[j]
                 val () = $effmask_exn assertloc (piles_j <> g1u2u 0u)
 
@@ -191,10 +189,6 @@ find_pile {n         : int}
                 val x2_lt_x1 =
                   (!(ptr_add<a> (addr@ arr, i2)))
                     \lt (!(ptr_add<a> (addr@ arr, i1)))
-(* val () = $effmask_all println! ("branch for piles possible increase in num_piles") *)
-(* val () = $effmask_all println! ("  x1 = ", $UNSAFE.ptr0_get<int> (ptr_add<a> (addr@ arr, i1))) *)
-(* val () = $effmask_all println! ("  x2 = ", $UNSAFE.ptr0_get<int> (ptr_add<a> (addr@ arr, i2))) *)
-(* val () = $effmask_all println! ("  x2_lt_x1 = ", x2_lt_x1) *)
 
                 prval () = view@ arr := fpf (pfelem1, pfelem2)
               in
@@ -228,10 +222,6 @@ find_pile {n         : int}
             val x2_lt_x1 =
               (!(ptr_add<a> (addr@ arr, i2)))
                 \lt (!(ptr_add<a> (addr@ arr, i1)))
-(* val () = $effmask_all println! ("branch for piles looping") *)
-(* val () = $effmask_all println! ("  x1 = ", $UNSAFE.ptr0_get<int> (ptr_add<a> (addr@ arr, i1))) *)
-(* val () = $effmask_all println! ("  x2 = ", $UNSAFE.ptr0_get<int> (ptr_add<a> (addr@ arr, i2))) *)
-(* val () = $effmask_all println! ("  x2_lt_x1 = ", x2_lt_x1) *)
 
             prval () = view@ arr := fpf (pfelem1, pfelem2)
           in
@@ -314,10 +304,6 @@ find_last_elem
                 val x1_lt_x2 =
                   (!(ptr_add<a> (addr@ arr, i1)))
                     \lt (!(ptr_add<a> (addr@ arr, i2)))
-(* val () = $effmask_all println! ("branch for last_elems possible increase in num_piles") *)
-(* val () = $effmask_all println! ("  x1 = ", $UNSAFE.ptr0_get<int> (ptr_add<a> (addr@ arr, i1))) *)
-(* val () = $effmask_all println! ("  x2 = ", $UNSAFE.ptr0_get<int> (ptr_add<a> (addr@ arr, i2))) *)
-(* val () = $effmask_all println! ("  x1_lt_x2 = ", x1_lt_x2) *)
 
                 prval () = view@ arr := fpf (pfelem1, pfelem2)
               in
@@ -355,10 +341,6 @@ find_last_elem
             val x1_lt_x2 =
               (!(ptr_add<a> (addr@ arr, i1)))
                 \lt (!(ptr_add<a> (addr@ arr, i2)))
-(* val () = $effmask_all println! ("branch for last_elems looping") *)
-(* val () = $effmask_all println! ("  x1 = ", $UNSAFE.ptr0_get<int> (ptr_add<a> (addr@ arr, i1))) *)
-(* val () = $effmask_all println! ("  x2 = ", $UNSAFE.ptr0_get<int> (ptr_add<a> (addr@ arr, i2))) *)
-(* val () = $effmask_all println! ("  x1_lt_x2 = ", x1_lt_x2) *)
 
             prval () = view@ arr := fpf (pfelem1, pfelem2)
           in
@@ -468,9 +450,6 @@ patience_sort_deal_refparams
                   links[pred i0] := q;
                   last_elems[pred i] := q;
                   tails[pred i] := q;
-(* $effmask_all println! ("q = ", $UNSAFE.cast{uint} q); *)
-(* $effmask_all println! ("i = ", $UNSAFE.cast{uint} i); *)
-(* $effmask_all println! ("i0 = ", $UNSAFE.cast{uint} i0); *)
                   loop (pf_last_elems, pf_tails |
                         arr, pred q, piles, links,
                         p_last_elems, p_tails, m)
@@ -651,38 +630,39 @@ k_way_merge_refparams
     (* How to play a game.                                 *)
     
     fn
-    play_game {i       : int | 2 <= i; i <= total_nodes}
+    find_opponent {i : int | 2 <= i; i <= total_nodes}
+                  (i : g1uint (tk, i))
+        :<> [j : int | 2 <= j; j <= total_nodes]
+            g1uint (tk, j) =
+      let
+        (* The prelude contains bitwise operations only for
+           non-dependent unsigned integer. We will not bother to
+           add them ourselves, but instead go back and forth
+           between dependent and non-dependent. *)
+        val i0 = g0ofg1 i
+        val j0 = g0uint_lxor<tk> (i0, g0u2u 1u)
+        val j = g1ofg0 j0
+
+        (* We have no proof the opponent is in the proper
+           range. Create a "proof" by runtime checks. *)
+        val () = $effmask_exn assertloc (g1u2u 2u <= j)
+        val () = $effmask_exn assertloc (j <= total_nodes)
+      in
+        j
+      end
+
+    fn
+    play_game {i, j    : int | 2 <= i; i <= total_nodes;
+                               2 <= j; j <= total_nodes}
               (arr     : &RD(array (a, n)),
                winvals : &array (link_t, winners_size),
-               i       : g1uint (tk, i))
+               i       : g1uint (tk, i),
+               j       : g1uint (tk, j))
         :<> [iwinner : pos | iwinner <= total_nodes]
             g1uint (tk, iwinner) =
       let
         macdef lt = patience_sort$lt<a>
 
-        fn
-        find_opponent {i : int | 2 <= i; i <= total_nodes}
-                      (i : g1uint (tk, i))
-            :<> [j : int | 2 <= j; j <= total_nodes]
-                g1uint (tk, j) =
-          let
-            (* The prelude contains bitwise operations only for
-               non-dependent unsigned integer. We will not bother to
-               add them ourselves, but instead go back and forth
-               between dependent and non-dependent. *)
-            val i0 = g0ofg1 i
-            val j0 = g0uint_lxor<tk> (i0, g0u2u 1u)
-            val j = g1ofg0 j0
-
-            (* We have no proof the opponent is in the proper
-               range. Create a "proof" by runtime checks. *)
-            val () = $effmask_exn assertloc (g1u2u 2u <= j)
-            val () = $effmask_exn assertloc (j <= total_nodes)
-          in
-            j
-          end
-
-        val j = find_opponent i
         val [winner_i : int] winner_i = winvals[i]
         and [winner_j : int] winner_j = winvals[j]
       in
@@ -736,14 +716,25 @@ k_way_merge_refparams
                      i        : g1uint (tk, i))
               :<!wrt> void =
             if i <= pred (istart + istart) then
-              let
-                val iwinner = play_game (arr, winvals, i)
-                and i2 = half i
-              in
-                winvals[i2] := winvals[iwinner];
-                winlinks[i2] := winlinks[iwinner];
-                play_initial_games (arr, winvals, winlinks,
-                                    succ (succ i))
+              begin    
+                if winvals[i] = link_nil then
+                  ()     (* Leave the loop immediately, if there is no
+                            competitor. *)
+                else          
+                  let
+                    val j = find_opponent i
+                    val iwinner = play_game (arr, winvals, i, j)
+                    and i2 = half i
+                  in
+                    winvals[i2] := winvals[iwinner];
+                    winlinks[i2] := winlinks[iwinner];
+                    if winvals[j] = link_nil then
+                      () (* Leave the loop immediately, if there is no
+                            opponent. *)
+                    else
+                      play_initial_games (arr, winvals, winlinks,
+                                          succ (succ i))
+                  end
               end
         in
           play_initial_games (arr, winvals, winlinks, istart);
@@ -764,7 +755,8 @@ k_way_merge_refparams
         :<!wrt> void =
       if i <> g1u2u 1u then
         let
-          val iwinner = play_game (arr, winvals, i)
+          val j = find_opponent i
+          val iwinner = play_game (arr, winvals, i, j)
           and i2 = half i
         in
           winvals[i2] := winvals[iwinner];
