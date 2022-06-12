@@ -25,22 +25,7 @@
 
 staload "patience-sort/SATS/patience-sort.sats"
 
-(* FIXME: CONSIDER INTRODUCING A SLICE TYPE, so I can interleave
-          winvals and winlinks to improve locality. *)
-
-stadef index_t (n : int, i : int) =
-  patience_sort_index_t (n, i)
-typedef index_t (tk : tkind, n : int, i : int) =
-  patience_sort_index_t (tk, n, i)
-typedef index_t (tk : tkind, n : int) =
-  patience_sort_index_t (tk, n)
-
-stadef link_t (n : int, i : int) =
-  patience_sort_link_t (n, i)
-typedef link_t (tk : tkind, n : int, i : int) =
-  patience_sort_link_t (tk, n, i)
-typedef link_t (tk : tkind, n : int) =
-  patience_sort_link_t (tk, n)
+(* ================================================================ *)
 
 extern praxi
 array_v_takeout_two
@@ -70,6 +55,22 @@ next_power_of_two
     :<> [k : int | i <= k; k < 2 * i]
         [n : nat]
         @(EXP2 (n, k) | g1uint (tk, k))
+
+(* ================================================================ *)
+
+stadef index_t (n : int, i : int) =
+  patience_sort_index_t (n, i)
+typedef index_t (tk : tkind, n : int, i : int) =
+  patience_sort_index_t (tk, n, i)
+typedef index_t (tk : tkind, n : int) =
+  patience_sort_index_t (tk, n)
+
+stadef link_t (n : int, i : int) =
+  patience_sort_link_t (n, i)
+typedef link_t (tk : tkind, n : int, i : int) =
+  patience_sort_link_t (tk, n, i)
+typedef link_t (tk : tkind, n : int) =
+  patience_sort_link_t (tk, n)
 
 (* ================================================================ *)
 (*
@@ -503,8 +504,7 @@ k_way_merge_refparams
            power     : g1uint (tk, power),
            piles     : &array (link_t (tk, n), n) >> _,
            links     : &RD(array (link_t (tk, n), n)),
-           winvals   : &array (link_t (tk, n)?, 2 * power) >> _,
-           winlinks  : &array (link_t (tk, n)?, 2 * power) >> _,
+           winners   : &array (link_t (tk, n)?, 4 * power) >> _,
            sorted    : &array (index_t (tk, n)?, n)
                        >> array (index_t (tk, n), n))
     :<!wrt> void =
@@ -553,58 +553,73 @@ k_way_merge_refparams
        runtime assertion here: *)
     val () = $effmask_exn assertloc (winners_size <= two * power)
 
-    prval @(winvals_left, winvals_right) =
-      array_v_split {link_t?} {..} {2 * power} {winners_size}
-                    (view@ winvals)
-    prval () = view@ winvals := winvals_left
+    prval @(winners_left, winners_right) =
+      array_v_split {link_t?} {..} {4 * power} {2 * winners_size}
+                    (view@ winners)
+    prval () = view@ winners := winners_left
 
-    prval @(winlinks_left, winlinks_right) =
-      array_v_split {link_t?} {..} {2 * power} {winners_size}
-                    (view@ winlinks)
-    prval () = view@ winlinks := winlinks_left
+    val () =
+      array_initize_elt<link_t> (winners, g1u2u (two * winners_size),
+                                 link_nil)
 
-    val () = array_initize_elt<link_t> (winvals, g1u2u winners_size,
-                                        link_nil)
-    val () = array_initize_elt<link_t> (winlinks, g1u2u winners_size,
-                                        link_nil)
+    #define VALUE 0
+    #define LINK  1
 
+    typedef winners_field_t (i : int) =
+      [i : int | i == VALUE || i == LINK]
+      int i
+    typedef winners_field_t =
+      [i : int] winners_field_t i
 
-    (* - - - - - - - - - - - - - - - - - - - - - - - - - - *)
-    (* Record which pile a winner will have come from.     *)
+    fn {}
+    winners_get {i       : int | i < winners_size}
+                (winners : &RD(array (link_t, 2 * winners_size)),
+                 field   : winners_field_t,
+                 i       : g1uint (tk, i))
+        :<> link_t (tk, n) =
+      let
+        prval () = lemma_g1uint_param i
+      in
+        winners[i + i + g1i2u field]
+      end
 
-    fun
-    init_pile_links
-              {i : nat | i <= num_piles}
-              .<num_piles - i>.
-              (winlinks : &array (link_t, winners_size),
-               i        : g1uint (tk, i))
+    fn {}
+    winners_set {i       : int | i < winners_size}
+                (winners : &array (link_t, 2 * winners_size) >> _,
+                 field   : winners_field_t,
+                 i       : g1uint (tk, i),
+                 x       : link_t)
         :<!wrt> void =
-      if i <> num_piles then
-        begin
-          winlinks[total_external_nodes + i] := succ i;
-          init_pile_links (winlinks, succ i)
-        end
+      let
+        prval () = lemma_g1uint_param i
+      in
+        winners[i + i + g1i2u field] := x
+      end
 
-    val () = init_pile_links (winlinks, zero)
+    overload [] with winners_get of 1000
+    overload [] with winners_set of 1000
 
     (* - - - - - - - - - - - - - - - - - - - - - - - - - - *)
     (* The top of each pile becomes a starting competitor. *)
+    (* The LINK field tells which pile a winner will have  *)
+    (* come from.                                          *)
 
     fun
     init_competitors
               {i : nat | i <= num_piles}
               .<num_piles - i>.
-              (winvals : &array (link_t, winners_size),
+              (winners : &array (link_t, 2 * winners_size),
                piles   : &array (link_t, n),
                i       : g1uint (tk, i))
         :<!wrt> void =
       if i <> num_piles then
         begin
-          winvals[total_external_nodes + i] := piles[i];
-          init_competitors (winvals, piles, succ i)
+          winners[VALUE, total_external_nodes + i] := piles[i];
+          winners[LINK, total_external_nodes + i] := succ i;
+          init_competitors (winners, piles, succ i)
         end
  
-    val () = init_competitors (winvals, piles, g1u2u 0u)
+    val () = init_competitors (winners, piles, g1u2u 0u)
 
     (* - - - - - - - - - - - - - - - - - - - - - - - - - - *)
     (* Discard the top of each pile.                       *)
@@ -655,19 +670,19 @@ k_way_merge_refparams
       end
 
     fn
-    play_game {i, j    : int | 2 <= i; i <= total_nodes;
-                               2 <= j; j <= total_nodes}
-              (arr     : &RD(array (a, n)),
-               winvals : &array (link_t, winners_size),
-               i       : g1uint (tk, i),
-               j       : g1uint (tk, j))
+    play_game {i, j     : int | 2 <= i; i <= total_nodes;
+                                2 <= j; j <= total_nodes}
+              {winner_i : int}
+              {winner_j : int}
+              (arr      : &RD(array (a, n)),
+               i        : g1uint (tk, i),
+               j        : g1uint (tk, j),
+               winner_i : link_t winner_i,
+               winner_j : link_t winner_j)
         :<> [iwinner : pos | iwinner <= total_nodes]
             g1uint (tk, iwinner) =
       let
         macdef lt = patience_sort$lt<a>
-
-        val [winner_i : int] winner_i = winvals[i]
-        and [winner_j : int] winner_j = winvals[j]
       in
         if winner_i = link_nil then
           j
@@ -703,8 +718,7 @@ k_way_merge_refparams
     build_tree {istart : pos | istart <= total_external_nodes}
                .<istart>.
                (arr      : &RD(array (a, n)),
-                winvals  : &array (link_t, winners_size),
-                winlinks : &array (link_t, winners_size),
+                winners  : &array (link_t, 2 * winners_size),
                 istart   : g1uint (tk, istart))
         :<!wrt> void =
       if istart <> one then
@@ -714,37 +728,39 @@ k_way_merge_refparams
                     {i : int | istart <= i; i <= (2 * istart) + 1}
                     .<(2 * istart) + 1 - i>.
                     (arr      : &RD(array (a, n)),
-                     winvals  : &array (link_t, winners_size),
-                     winlinks : &array (link_t, winners_size),
+                     winners  : &array (link_t, 2 * winners_size),
                      i        : g1uint (tk, i))
               :<!wrt> void =
             if i <= pred (istart + istart) then
-              begin    
-                if winvals[i] = link_nil then
+              let
+                val winner_i = winners[VALUE, i]
+              in
+                if winner_i = link_nil then
                   ()     (* Leave the loop immediately, if there is no
                             competitor. *)
                 else          
                   let
                     val j = find_opponent i
-                    val iwinner = play_game (arr, winvals, i, j)
+                    val winner_j = winners[VALUE, j]
+                    val iwinner =
+                      play_game (arr, i, j, winner_i, winner_j)
                     and i2 = half i
                   in
-                    winvals[i2] := winvals[iwinner];
-                    winlinks[i2] := winlinks[iwinner];
-                    if winvals[j] = link_nil then
+                    winners[VALUE, i2] := winners[VALUE, iwinner];
+                    winners[LINK, i2] := winners[LINK, iwinner];
+                    if winner_j = link_nil then
                       () (* Leave the loop immediately, if there is no
                             opponent. *)
                     else
-                      play_initial_games (arr, winvals, winlinks,
-                                          succ (succ i))
+                      play_initial_games (arr, winners, succ (succ i))
                   end
               end
         in
-          play_initial_games (arr, winvals, winlinks, istart);
-          build_tree (arr, winvals, winlinks, half istart)
+          play_initial_games (arr, winners, istart);
+          build_tree (arr, winners, half istart)
         end
 
-    val () = build_tree (arr, winvals, winlinks, total_external_nodes)
+    val () = build_tree (arr, winners, total_external_nodes)
 
     (* - - - - - - - - - - - - - - - - - - - - - - - - - - *)
 
@@ -752,19 +768,19 @@ k_way_merge_refparams
     replay_games {i : pos | i <= total_nodes}
                  .<i>.
                  (arr      : &RD(array (a, n)),
-                  winvals  : &array (link_t, winners_size),
-                  winlinks : &array (link_t, winners_size),
+                  winners  : &array (link_t, 2 * winners_size),
                   i        : g1uint (tk, i))
         :<!wrt> void =
       if i <> g1u2u 1u then
         let
           val j = find_opponent i
-          val iwinner = play_game (arr, winvals, i, j)
+          val iwinner = play_game (arr, i, j, winners[VALUE, i],
+                                   winners[VALUE, j])
           and i2 = half i
         in
-          winvals[i2] := winvals[iwinner];
-          winlinks[i2] := winlinks[iwinner];
-          replay_games (arr, winvals, winlinks, i2)
+          winners[VALUE, i2] := winners[VALUE, iwinner];
+          winners[LINK, i2] := winners[LINK, iwinner];
+          replay_games (arr, winners, i2)
         end
 
     fun
@@ -777,8 +793,7 @@ k_way_merge_refparams
            arr       : &RD(array (a, n)),
            piles     : &array (link_t, n),
            links     : &array (link_t, n),
-           winvals   : &array (link_t, winners_size),
-           winlinks  : &array (link_t, winners_size),
+           winners   : &array (link_t, 2 * winners_size),
            p_sorted  : ptr p_sorted,
            isorted   : g1uint (tk, isorted))
         :<!wrt> void =
@@ -787,12 +802,12 @@ k_way_merge_refparams
       if isorted <> n then
         let
           prval @(pf_elem, pf_rest) = array_v_uncons pf_sorted
-          val winner = winvals[1]
+          val winner = winners[VALUE, g1u2u 1u]
           val () = $effmask_exn assertloc (winner <> link_nil)
           val () = !p_sorted := pred winner
 
           (* Move to the next element in the winner's pile. *)
-          val ilink = winlinks[1]
+          val ilink = winners[LINK, g1u2u 1u]
           val () = $effmask_exn assertloc (ilink <> link_nil)
           val inext = piles[pred ilink]
           val () = (if inext <> link_nil then
@@ -801,12 +816,13 @@ k_way_merge_refparams
           (* Replay games, with the new element as a competitor. *)
           val i = half total_nodes + ilink
           val () = $effmask_exn assertloc (i <= total_nodes)
-          val () = winvals[i] := inext
-          val () = replay_games (arr, winvals, winlinks, i)
+          val () = winners[VALUE, i] := inext
+          val () = replay_games (arr, winners, i)
 
           val () = merge (pf_rest |
-                          arr, piles, links, winvals, winlinks,
-                          ptr_succ<index_t> p_sorted, succ isorted)
+                          arr, piles, links, winners,
+                          ptr_succ<index_t> p_sorted,
+                          succ isorted)
           prval () = pf_sorted := array_v_cons (pf_elem, pf_rest)
         in
         end
@@ -818,17 +834,12 @@ k_way_merge_refparams
         end
 
     val () = merge (view@ sorted |
-                    arr, piles, links, winvals, winlinks,
-                    addr@ sorted, zero)
+                    arr, piles, links, winners, addr@ sorted, zero)
 
     prval () =
-      array_v_uninitize_without_doing_anything (view@ winvals)
-    prval () =
-      array_v_uninitize_without_doing_anything (view@ winlinks)
-    prval () = view@ winvals :=
-      array_v_unsplit (view@ winvals, winvals_right)
-    prval () = view@ winlinks :=
-      array_v_unsplit (view@ winlinks, winlinks_right)
+      array_v_uninitize_without_doing_anything (view@ winners)
+    prval () = view@ winners :=
+      array_v_unsplit (view@ winners, winners_right)
   in
   end
 
@@ -840,32 +851,28 @@ k_way_merge_valparams
           {power       : int | num_piles <= power}
           {p_piles     : addr}
           {p_links     : addr}
-          {p_winvals   : addr}
-          {p_winlinks  : addr}
+          {p_winners   : addr}
           (pf_exp2     : [exponent : nat] EXP2 (exponent, power),
            pf_piles    : !array_v (link_t (tk, n), p_piles, n)
                          >> _,
            pf_links    : !array_v (link_t (tk, n), p_links, n)
                          >> _,
-           pf_winvals  : !array_v (link_t (tk, n)?, p_winvals,
-                                   2 * power) >> _,
-           pf_winlinks : !array_v (link_t (tk, n)?, p_winlinks,
-                                   2 * power) >> _ |
+           pf_winners  : !array_v (link_t (tk, n)?, p_winners,
+                                   4 * power) >> _ |
            arr         : &RD(array (a, n)),
            n           : g1uint (tk, n),
            num_piles   : g1uint (tk, num_piles),
            power       : g1uint (tk, power),
            p_piles     : ptr p_piles,
            p_links     : ptr p_links,
-           p_winvals   : ptr p_winvals,
-           p_winlinks  : ptr p_winlinks,
+           p_winners   : ptr p_winners,
            sorted      : &array (index_t (tk, n)?, n)
                          >> array (index_t (tk, n), n))
     :<!wrt> void =
   k_way_merge_refparams<a><tk>
     (pf_exp2 |
      arr, n, num_piles, power,
-     !p_piles, !p_links, !p_winvals, !p_winlinks, sorted)
+     !p_piles, !p_links, !p_winners, sorted)
 
 implement {a} {tk}
 patience_sort_merge_refparams
@@ -887,25 +894,18 @@ patience_sort_merge_valparams
   let
     typedef link_t = link_t (tk, n)
 
-    prval @(pf_winvals_and_winlinks, pf_rest) =
+    prval @(pf_winners, pf_rest) =
       array_v_split {link_t?} {p_workspace} {n_workspace} {4 * power}
                     pf_workspace
-    prval @(pf_winvals, pf_winlinks) =
-      array_v_split {link_t?} {p_workspace} {4 * power} {2 * power}
-                    pf_winvals_and_winlinks
 
-    val p_winvals = p_workspace
-    and p_winlinks = ptr_add<g1uint tk> (p_workspace, power + power)
+    val p_winners = p_workspace
     val () =
       k_way_merge_valparams<a><tk>
-        (pf_exp2, pf_piles, pf_links, pf_winvals, pf_winlinks |
-         arr, n, num_piles, power, p_piles, p_links,
-         p_winvals, p_winlinks, sorted)
+        (pf_exp2, pf_piles, pf_links, pf_winners |
+         arr, n, num_piles, power, p_piles, p_links, p_winners,
+         sorted)
 
-    prval pf_winvals_and_winlinks =
-      array_v_unsplit (pf_winvals, pf_winlinks)
-    prval () = pf_workspace :=
-      array_v_unsplit (pf_winvals_and_winlinks, pf_rest)
+    prval () = pf_workspace := array_v_unsplit (pf_winners, pf_rest)
   in
   end
 
