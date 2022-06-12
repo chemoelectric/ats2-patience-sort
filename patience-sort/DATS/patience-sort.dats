@@ -25,6 +25,9 @@
 
 staload "patience-sort/SATS/patience-sort.sats"
 
+(* FIXME: CONSIDER INTRODUCING A SLICE TYPE, so I can interleave
+          winvals and winlinks to improve locality. *)
+
 stadef index_t (n : int, i : int) =
   patience_sort_index_t (n, i)
 typedef index_t (tk : tkind, n : int, i : int) =
