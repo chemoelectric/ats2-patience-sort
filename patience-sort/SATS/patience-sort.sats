@@ -143,11 +143,11 @@ in
   overload patience_sort_merge with patience_sort_merge_refparams
   overload patience_sort_merge with patience_sort_merge_valparams
 
-  (* patience_sort_with_its_own_workspace --
-     May use stack, malloc, or any combination. *)
+  (* Do both deal and merge. May use stack, malloc, or any
+     combination. *)
   fn {a  : vt@ype}
      {tk : tkind}
-  patience_sort_with_its_own_workspace (* FIXME: NEEDS A BETTER NAME **********************************************)
+  patience_sort_into_index_array
             {n      : int}
             (arr    : &RD(array (a, n)),
              n      : g1uint (tk, n),
@@ -155,6 +155,19 @@ in
                       >> array (index_t (tk, n), n))
       :<!wrt> void
 
+  (* Return a new array that is sorted. *)
+  fn {a  : vt@ype}
+     {tk : tkind}
+  patience_sort_returning_array
+            {n   : int}
+            (arr : &array (a, n) >> array (a?!, n),
+             n   : g1uint (tk, n))
+      :<!wrt> [p : addr]
+              @(array_v (a, p, n),
+                mfree_gc_v p |
+                ptr p)
+
 end
 
-overload patience_sort with patience_sort_with_its_own_workspace
+overload patience_sort with patience_sort_into_index_array
+overload patience_sort with patience_sort_returning_array

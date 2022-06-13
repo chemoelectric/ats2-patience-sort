@@ -39,8 +39,8 @@ find_length {n   : int}
     g1i2u (length lst)
   end
 
-implement
-main0 () =
+fn
+test1 () : void =
   let
     implement
     patience_sort$lt<int> (x, y) =
@@ -100,4 +100,69 @@ main0 () =
         p := list_tail p
       end;
     assertloc (iseqz p)
+  end
+
+fn
+test2 () : void =
+  let
+    implement
+    patience_sort$lt<int> (x, y) =
+      x < y
+
+    #define ARRSZ 100
+
+(**)
+    val example_list =
+      $list (22, 15, 98, 82, 22, 4, 58, 70, 80, 38, 49, 48, 46, 54,
+             93, 8, 54, 2, 72, 84, 86, 76, 53, 37, 90)
+
+    val sorted_list =
+      $list (2, 4, 8, 15, 22, 22, 37, 38, 46, 48, 49, 53, 54, 54, 58,
+             70, 72, 76, 80, 82, 84, 86, 90, 93, 98)
+(**)
+(*
+    val example_list = $list (5, 4, 3, 2, 1)
+    val sorted_list = $list (1, 2, 3, 4, 5)
+*)
+
+    val [n : int] n = find_length example_list
+    val () = assertloc (n <= ARRSZ)
+
+    typedef index_t = patience_sort_index_t (uint_kind, n)
+
+    var arr : array (int, ARRSZ)
+    val () = array_initize_elt<int> (arr, i2sz ARRSZ, 0)
+
+    prval @(arr_left, arr_right) =
+      array_v_split {int} {..} {ARRSZ} {n} (view@ arr)
+
+    prval () = view@ arr := arr_left
+
+    val () = array_copy_from_list<int> (!(addr@ arr), example_list)
+    val @(pf_sorted, pfgc_sorted | p_sorted) =
+      patience_sort<int> (arr, n)
+    macdef sorted = !p_sorted
+
+    prval () = view@ arr := array_v_unsplit (view@ arr, arr_right)
+
+    var i : [i : nat | i <= n] uint i
+    var p : List (int) = sorted_list
+    prval () = lemma_list_param p
+  in
+    for (i := 0u; i <> n; i := succ i)
+      let
+        val () = assertloc (isneqz p)
+      in
+        assertloc (sorted[i] = list_head p);
+        p := list_tail p
+      end;
+    assertloc (iseqz p);
+    array_ptr_free (pf_sorted, pfgc_sorted | p_sorted)
+  end
+
+implement
+main0 () =
+  begin
+    test1 ();
+    test2 ()
   end
