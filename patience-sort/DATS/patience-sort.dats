@@ -1097,6 +1097,12 @@ patience_sort_into_index_array
 implement {a} {tk}
 patience_sort_returning_array {n} (arr, n) =
   let
+
+    (* FIXME: The intermediate ‘indices’ array is unnecessary. We
+              could either go straight to a destination array or
+              (because the results come out of the merge stage one at
+              a time, in order) write a generator. *)
+
     prval () = lemma_array_param arr
     prval () = prop_verify {0 <= n} ()
 
