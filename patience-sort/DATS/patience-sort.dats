@@ -22,6 +22,7 @@
 #define ATS_DYNLOADFLAG 0
 
 #include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
 
 staload "patience-sort/SATS/patience-sort.sats"
 
@@ -936,7 +937,7 @@ in
 end
 
 implement {a} {tk}
-patience_sort_with_its_own_workspace
+patience_sort_into_index_array
           {n} (arr, n, sorted) =
   let
     val zero : g1uint (tk, 0) = g1u2u 0u
@@ -1091,4 +1092,102 @@ patience_sort_with_its_own_workspace
       end
   end
 
-(*------------------------------------------------------------------*)
+(* ================================================================ *)
+
+implement {a} {tk}
+patience_sort_returning_array {n} (arr, n) =
+  let
+    prval () = lemma_array_param arr
+    prval () = prop_verify {0 <= n} ()
+
+    typedef index_t = index_t (tk, n)
+
+    fn
+    sort (arr     : &RD(array (a, n)),
+          indices : &array (index_t?, n) >> array (index_t, n))
+        :<!wrt> void =
+      patience_sort<a><tk> (arr, n, indices)
+
+    fn
+    make_sorted_array (arr     : &array (a, n) >> array (a?!, n),
+                       indices : &RD(array (index_t, n)))
+        :<!wrt> [p : addr]
+                @(array_v (a, p, n),
+                  mfree_gc_v p |
+                  ptr p) =
+      let
+        fun
+        loop {i : nat | i <= n}
+             {p : addr}
+             {q : addr}
+             .<i>.
+             (pf_sarr : !array_v (a?, p, i) >> array_v (a, p, i),
+              pf_arr  : !array_v (a, q, n) |
+              p_arr   : ptr q,
+              indices : &RD(array (index_t, n)),
+              p_sarr  : ptr p,
+              i       : g1uint (tk, i))
+            :<!wrt> void =
+          if i = g1u2u 0u then
+            let
+              prval () = pf_sarr := array_v_unnil_nil{a?, a} pf_sarr
+            in
+            end
+          else
+            let
+              prval @(pf_sarr1, pf_elem) = array_v_unextend pf_sarr
+
+              val i1 = pred i
+
+              val elem : a =
+                $UN.ptr0_get<a> (ptr_add<a> (p_arr, indices[i1]))
+              val () =
+                ptr_set<a> (pf_elem | ptr_add<a> (p_sarr, i1), elem)
+
+              val () =
+                loop (pf_sarr1, pf_arr | p_arr, indices, p_sarr, i1)
+
+              prval () = pf_sarr := array_v_extend (pf_sarr1, pf_elem)
+            in
+            end
+
+        val @(pf_sarr, pfgc_sarr | p_sarr) =
+          array_ptr_alloc<a> (g1u2u n)
+        val () =
+          loop (pf_sarr, view@ arr | addr@ arr, indices, p_sarr, n)
+        prval () = $UN.castview2void_at{array (a?!, n)} (view@ arr)
+      in
+        @(pf_sarr, pfgc_sarr | p_sarr)
+      end
+  in
+    if n <= g1i2u LEN_THRESHOLD then
+      let
+        var indices : array (index_t, LEN_THRESHOLD)
+        prval @(pf_indices, pf_rest) =
+          array_v_split {index_t?} {..} {LEN_THRESHOLD} {n}
+                        (view@ indices)
+        prval () = view@ indices := pf_indices
+        val () = sort (arr, indices)
+        val sarr = make_sorted_array (arr, indices)
+        prval () =
+          array_v_uninitize_without_doing_anything (view@ indices)
+        prval () = view@ indices :=
+          array_v_unsplit (view@ indices, pf_rest)
+      in
+        sarr
+      end
+    else
+      let
+        val @(pf_indices, pfgc_indices | p_indices) =
+          array_ptr_alloc<index_t> (g1u2u n)
+        macdef indices = !p_indices
+        val () = sort (arr, indices)
+        val sarr = make_sorted_array (arr, indices)
+        val () = array_ptr_free (pf_indices, pfgc_indices |
+                                 p_indices)
+      in
+        sarr
+      end
+  end
+
+(* ================================================================ *)
