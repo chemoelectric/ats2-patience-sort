@@ -155,13 +155,13 @@ lib_LTLIBRARIES += libats2-patience-sort.la
 
 PATIENCE_SORT_SATS = patience-sort/SATS/patience-sort.sats
 PATIENCE_SORT_SATS_C = patience-sort/SATS/patience-sort_sats.c
-EXTRA_DIST += $(PATIENCE-SORT_SATS)
-CLEANFILES += $(PATIENCE-SORT_SATS_C)
+EXTRA_DIST += $(PATIENCE_SORT_SATS)
+CLEANFILES += $(PATIENCE_SORT_SATS_C)
 
 PATIENCE_SORT_DATS = patience-sort/DATS/patience-sort.sats
 PATIENCE_SORT_DATS_C = patience-sort/DATS/patience-sort_dats.c
-EXTRA_DIST += $(PATIENCE-SORT_DATS)
-CLEANFILES += $(PATIENCE-SORT_DATS_C)
+EXTRA_DIST += $(PATIENCE_SORT_DATS)
+CLEANFILES += $(PATIENCE_SORT_DATS_C)
 
 nodist_libats2_patience_sort_la_SOURCES =
 nodist_libats2_patience_sort_la_SOURCES += $(PATIENCE_SORT_SATS_C)
@@ -215,8 +215,7 @@ list_ats_dependencies_LDADD += -latslib
 
 #--------------------------------------------------------------------------
 
-# nodist_pkgconfig_DATA += ats2-patience-sort.pc
-# nodist_pkgconfig_DATA += patience-sort.pc
+nodist_pkgconfig_DATA += ats2-patience-sort.pc
 
 #--------------------------------------------------------------------------
 # local variables:

@@ -33,7 +33,7 @@
 #
 
 # aminclude_static.am generated automatically by Autoconf
-# from AX_AM_MACROS_STATIC on Mon Jun  6 11:15:30 CDT 2022
+# from AX_AM_MACROS_STATIC on Tue Jun 14 14:26:46 CDT 2022
 
 
 
@@ -138,7 +138,7 @@ DIST_COMMON = $(srcdir)/Makefile.am $(top_srcdir)/configure \
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
-CONFIG_CLEAN_FILES = list-ats-dependencies.dats
+CONFIG_CLEAN_FILES = ats2-patience-sort.pc list-ats-dependencies.dats
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(libdir)" \
 	"$(DESTDIR)$(pkgconfigdir)" "$(DESTDIR)$(pkgincludedir)"
@@ -434,6 +434,7 @@ TEST_LOG_DRIVER = $(SHELL) $(top_srcdir)/build-aux/test-driver
 TEST_LOG_COMPILE = $(TEST_LOG_COMPILER) $(AM_TEST_LOG_FLAGS) \
 	$(TEST_LOG_FLAGS)
 am__DIST_COMMON = $(srcdir)/Makefile.in \
+	$(srcdir)/ats2-patience-sort.pc.in \
 	$(srcdir)/list-ats-dependencies.dats.in \
 	$(top_srcdir)/aminclude_static.am \
 	$(top_srcdir)/build-aux/compile \
@@ -630,10 +631,10 @@ AUTOMAKE_OPTIONS = foreign subdir-objects -Wno-portability
 @CODE_COVERAGE_ENABLED_TRUE@code_coverage_sanitize = $(subst -,_,$(subst .,_,$(1)))
 @CODE_COVERAGE_ENABLED_TRUE@AM_DISTCHECK_CONFIGURE_FLAGS := $(AM_DISTCHECK_CONFIGURE_FLAGS) --disable-code-coverage
 EXTRA_DIST = $(srcdir)/silent-rules.mk COPYING INSTALL README AUTHORS \
-	$(PATIENCE-SORT_SATS) $(PATIENCE-SORT_DATS) \
+	$(PATIENCE_SORT_SATS) $(PATIENCE_SORT_DATS) \
 	tests/try-int-sort.dats list-ats-dependencies.dats
 MOSTLYCLEANFILES = 
-CLEANFILES = $(PATIENCE-SORT_SATS_C) $(PATIENCE-SORT_DATS_C) \
+CLEANFILES = $(PATIENCE_SORT_SATS_C) $(PATIENCE_SORT_DATS_C) \
 	tests/try-int-sort tests/try-int-sort_tests.c \
 	list-ats-dependencies list-ats-dependencies_depsprog.c
 DISTCLEANFILES = Makefile GNUmakefile
@@ -650,7 +651,9 @@ LDADD = $(CODE_COVERAGE_LIBS)
 #
 lib_LTLIBRARIES = libats2-patience-sort.la
 nobase_nodist_pkginclude_HEADERS = 
-nodist_pkgconfig_DATA = 
+
+#--------------------------------------------------------------------------
+nodist_pkgconfig_DATA = ats2-patience-sort.pc
 CODE_COVERAGE_IGNORE_PATTERN = /usr/include/* /usr/include/*/* \
 	$(PATSHOME)/ccomp/runtime/* $(PATSHOME)/prelude/CATS/*
 
@@ -727,6 +730,8 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	$(am__cd) $(srcdir) && $(ACLOCAL) $(ACLOCAL_AMFLAGS)
 $(am__aclocal_m4_deps):
+ats2-patience-sort.pc: $(top_builddir)/config.status $(srcdir)/ats2-patience-sort.pc.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
 list-ats-dependencies.dats: $(top_builddir)/config.status $(srcdir)/list-ats-dependencies.dats.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 install-binPROGRAMS: $(bin_PROGRAMS)
@@ -1701,11 +1706,6 @@ tests/try-int-sort_tests.c: tests/try-int-sort.dats
 tests-clean:
 	-rm -f tests/*.$(OBJEXT)
 	-rm -f tests/*.sh
-
-#--------------------------------------------------------------------------
-
-# nodist_pkgconfig_DATA += ats2-patience-sort.pc
-# nodist_pkgconfig_DATA += patience-sort.pc
 
 #--------------------------------------------------------------------------
 # local variables:
