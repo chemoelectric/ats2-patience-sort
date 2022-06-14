@@ -498,6 +498,9 @@ k_way_merge_refparams
           {n         : int}
           {num_piles : pos | num_piles <= n}
           {power     : int | num_piles <= power}
+          {n_indices : int | n_indices == n || n_indices == 0}
+          {n_elems   : int | n_elems == n || n_elems == 0;
+                             n_indices == 0 || n_elems == 0}
           (pf_exp2   : [exponent : nat] EXP2 (exponent, power) |
            arr       : &RD(array (a, n)),
            n         : g1uint (tk, n),
@@ -506,8 +509,11 @@ k_way_merge_refparams
            piles     : &array (link_t (tk, n), n) >> _,
            links     : &RD(array (link_t (tk, n), n)),
            winners   : &array (link_t (tk, n)?, 4 * power) >> _,
-           sorted    : &array (index_t (tk, n)?, n)
-                       >> array (index_t (tk, n), n))
+           indices   : &array (index_t (tk, n)?, n_indices)
+                       >> array (index_t (tk, n), n_indices),
+           n_indices : g1uint (tk, n_indices),
+           elements  : &array (a?, n_elems) >> array (a, n_elems),
+           n_elems   : g1uint (tk, n_elems))
     :<!wrt> void =
   (*
     k-way merge by tournament tree.
@@ -620,7 +626,7 @@ k_way_merge_refparams
           init_competitors (winners, piles, succ i)
         end
  
-    val () = init_competitors (winners, piles, g1u2u 0u)
+    val () = init_competitors (winners, piles, zero)
 
     (* - - - - - - - - - - - - - - - - - - - - - - - - - - *)
     (* Discard the top of each pile.                       *)
@@ -637,13 +643,13 @@ k_way_merge_refparams
           val link = piles[i]
 
           (* None of the piles should have been empty. *)
-          val () = $effmask_exn assertloc (link <> g1u2u 0u)
+          val () = $effmask_exn assertloc (link <> link_nil)
         in
           piles[i] := links[pred link];
           discard_tops (piles, links, succ i)
         end
 
-    val () = discard_tops (piles, links, g1u2u 0u)
+    val () = discard_tops (piles, links, zero)
 
     (* - - - - - - - - - - - - - - - - - - - - - - - - - - *)
     (* How to play a game.                                 *)
@@ -785,27 +791,27 @@ k_way_merge_refparams
         end
 
     fun
-    merge {isorted  : nat | isorted <= n}
-          {p_sorted : addr}
-          .<n - isorted>.
-          (pf_sorted : !array_v (index_t?, p_sorted, n - isorted)
-                          >> array_v (index_t, p_sorted,
-                                      n - isorted) |
-           arr       : &RD(array (a, n)),
-           piles     : &array (link_t, n),
-           links     : &array (link_t, n),
-           winners   : &array (link_t, 2 * winners_size),
-           p_sorted  : ptr p_sorted,
-           isorted   : g1uint (tk, isorted))
+    merge_to_indices
+              {isorted    : nat | isorted <= n}
+              {p_indices  : addr}
+              .<n - isorted>.
+              (pf_indices : !array_v (index_t?, p_indices,
+                                      n - isorted)
+                            >> array_v (index_t, p_indices,
+                                        n - isorted) |
+               arr        : &RD(array (a, n)),
+               piles      : &array (link_t, n),
+               links      : &array (link_t, n),
+               winners    : &array (link_t, 2 * winners_size),
+               p_indices  : ptr p_indices,
+               isorted    : g1uint (tk, isorted))
         :<!wrt> void =
-      (* This function not only fills in the "sorted" array, but
-         transforms it from "uninitialized" to "initialized". *)
       if isorted <> n then
         let
-          prval @(pf_elem, pf_rest) = array_v_uncons pf_sorted
+          prval @(pf_elem, pf_rest) = array_v_uncons pf_indices
           val winner = winners[VALUE, g1u2u 1u]
           val () = $effmask_exn assertloc (winner <> link_nil)
-          val () = !p_sorted := pred winner
+          val () = !p_indices := pred winner
 
           (* Move to the next element in the winner's pile. *)
           val ilink = winners[LINK, g1u2u 1u]
@@ -820,28 +826,121 @@ k_way_merge_refparams
           val () = winners[VALUE, i] := inext
           val () = replay_games (arr, winners, i)
 
-          val () = merge (pf_rest |
-                          arr, piles, links, winners,
-                          ptr_succ<index_t> p_sorted,
-                          succ isorted)
-          prval () = pf_sorted := array_v_cons (pf_elem, pf_rest)
+          val () =
+            merge_to_indices
+              (pf_rest |
+               arr, piles, links, winners, ptr_succ<index_t> p_indices,
+               succ isorted)
+
+          prval () = pf_indices := array_v_cons (pf_elem, pf_rest)
         in
         end
       else
         let
-          prval () = pf_sorted :=
-            array_v_unnil_nil{index_t?, index_t} pf_sorted
+          prval () = pf_indices :=
+            array_v_unnil_nil{index_t?, index_t} pf_indices
         in
         end
 
-    val () = merge (view@ sorted |
-                    arr, piles, links, winners, addr@ sorted, zero)
+    fun
+    merge_to_elements
+              (* The "arr" array really should have its element
+                 type changed to "a?!". We will do that in the
+                 publicly available routine instead of here. *)
+              {isorted  : nat | isorted <= n}
+              {p_elems  : addr}
+              .<n - isorted>.
+              (pf_elems : !array_v (a?, p_elems, n - isorted)
+                          >> array_v (a, p_elems, n - isorted) |
+               arr      : &RD(array (a, n)),
+               piles    : &array (link_t, n),
+               links    : &array (link_t, n),
+               winners  : &array (link_t, 2 * winners_size),
+               p_elems  : ptr p_elems,
+               isorted  : g1uint (tk, isorted))
+        :<!wrt> void =
+      if isorted <> n then
+        let
+          prval @(pf_elem, pf_rest) = array_v_uncons pf_elems
+          val winner = winners[VALUE, g1u2u 1u]
+          val () = $effmask_exn assertloc (winner <> link_nil)
+          val () = !p_elems :=
+            $UN.ptr0_get<a> (ptr_add<a> (addr@ arr, pred winner))
 
-    prval () =
-      array_v_uninitize_without_doing_anything (view@ winners)
-    prval () = view@ winners :=
-      array_v_unsplit (view@ winners, winners_right)
+          (* Move to the next element in the winner's pile. *)
+          val ilink = winners[LINK, g1u2u 1u]
+          val () = $effmask_exn assertloc (ilink <> link_nil)
+          val inext = piles[pred ilink]
+          val () = (if inext <> link_nil then
+                      piles[pred ilink] := links[pred inext])
+
+          (* Replay games, with the new element as a competitor. *)
+          val i = half total_nodes + ilink
+          val () = $effmask_exn assertloc (i <= total_nodes)
+          val () = winners[VALUE, i] := inext
+          val () = replay_games (arr, winners, i)
+
+          val () =
+            merge_to_elements
+              (pf_rest |
+               arr, piles, links, winners, ptr_succ<a> p_elems,
+               succ isorted)
+
+          prval () = pf_elems := array_v_cons (pf_elem, pf_rest)
+        in
+        end
+      else
+        let
+          prval () = pf_elems := array_v_unnil_nil{a?, a} pf_elems
+        in
+        end
   in
+    if n_indices = zero then
+      let
+        prval () = view@ indices :=
+          array_v_unnil_nil{index_t?, index_t} (view@ indices)
+      in
+        if n_elems = zero then
+          let
+            prval () = view@ elements :=
+              array_v_unnil_nil{a?, a} (view@ elements)
+
+            prval () =
+              array_v_uninitize_without_doing_anything (view@ winners)
+            prval () = view@ winners :=
+              array_v_unsplit (view@ winners, winners_right)
+          in
+          end
+        else
+          let
+            val () =
+              merge_to_elements
+                (view@ elements |
+                 arr, piles, links, winners, addr@ elements, zero)
+
+            prval () =
+              array_v_uninitize_without_doing_anything (view@ winners)
+            prval () = view@ winners :=
+              array_v_unsplit (view@ winners, winners_right)
+          in
+          end
+      end
+    else
+      let
+        val () =
+          merge_to_indices
+            (view@ indices |
+             arr, piles, links, winners, addr@ indices, zero)
+
+        prval () = view@ elements :=
+          array_v_unnil_nil{a?, a} (view@ elements)
+
+        prval () =
+          array_v_uninitize_without_doing_anything (view@ winners)
+        prval () = view@ winners :=
+          array_v_unsplit (view@ winners, winners_right)
+      in
+      end
   end
 
 fn {a  : vt@ype}
@@ -850,6 +949,9 @@ k_way_merge_valparams
           {n           : int}
           {num_piles   : pos | num_piles <= n}
           {power       : int | num_piles <= power}
+          {n_indices   : int | n_indices == n || n_indices == 0}
+          {n_elems     : int | n_elems == n || n_elems == 0;
+                               n_indices == 0 || n_elems == 0}
           {p_piles     : addr}
           {p_links     : addr}
           {p_winners   : addr}
@@ -867,31 +969,34 @@ k_way_merge_valparams
            p_piles     : ptr p_piles,
            p_links     : ptr p_links,
            p_winners   : ptr p_winners,
-           sorted      : &array (index_t (tk, n)?, n)
-                         >> array (index_t (tk, n), n))
+           indices     : &array (index_t (tk, n)?, n_indices)
+                         >> array (index_t (tk, n), n_indices),
+           n_indices   : g1uint (tk, n_indices),
+           elements    : &array (a?, n_elems) >> array (a, n_elems),
+           n_elems     : g1uint (tk, n_elems))
     :<!wrt> void =
   k_way_merge_refparams<a><tk>
     (pf_exp2 |
-     arr, n, num_piles, power,
-     !p_piles, !p_links, !p_winners, sorted)
+     arr, n, num_piles, power, !p_piles, !p_links, !p_winners,
+     indices, n_indices, elements, n_elems)
 
 implement {a} {tk}
-patience_sort_merge_refparams
+patience_sort_merge_to_indices_refparams
           (pf_exp2 |
            arr, n, num_piles, power, piles, links,
-           workspace, sorted) =
-  patience_sort_merge_valparams<a><tk>
+           workspace, indices) =
+  patience_sort_merge_to_indices_valparams<a><tk>
     (pf_exp2, view@ piles, view@ links, view@ workspace |
      arr, n, num_piles, power,
-     addr@ piles, addr@ links, addr@ workspace, sorted)
+     addr@ piles, addr@ links, addr@ workspace, indices)
 
 implement {a} {tk}
-patience_sort_merge_valparams
+patience_sort_merge_to_indices_valparams
           {n} {num_piles} {power} {n_workspace}
           {p_piles} {p_links} {p_workspace}
           (pf_exp2, pf_piles, pf_links, pf_workspace |
            arr, n, num_piles, power, p_piles, p_links,
-           p_workspace, sorted) =
+           p_workspace, indices) =
   let
     typedef link_t = link_t (tk, n)
 
@@ -899,12 +1004,17 @@ patience_sort_merge_valparams
       array_v_split {link_t?} {p_workspace} {n_workspace} {4 * power}
                     pf_workspace
 
+    var elements : array (a, 0)
+
     val p_winners = p_workspace
     val () =
       k_way_merge_valparams<a><tk>
         (pf_exp2, pf_piles, pf_links, pf_winners |
          arr, n, num_piles, power, p_piles, p_links, p_winners,
-         sorted)
+         indices, n, elements, g1u2u 0u)
+
+    prval () = view@ elements :=
+      array_v_unnil_nil{a, a?} (view@ elements)
 
     prval () = pf_workspace := array_v_unsplit (pf_winners, pf_rest)
   in
