@@ -204,9 +204,11 @@ in
   (* sorting. May use stack, malloc, or any combination for the     *)
   (* intermediate work spaces.                                      *)
 
+  (* Fill an array with sorted indices into the original array. Leave
+     the original array unaltered. *)
   fn {a  : vt@ype}
      {tk : tkind}
-  patience_sort_into_indices_array
+  patience_sort_indices
             {n       : int}
             (arr     : &RD(array (a, n)),
              n       : g1uint (tk, n),
@@ -214,6 +216,9 @@ in
                         >> array (index_t (tk, n), n))
       :<!wrt> void
 
+  (* Fill an existing array with the sorted elements. Leave the
+     original *data* unaltered, although its *views* may be
+     deleted. *)
   fn {a  : vt@ype}
      {tk : tkind}
   patience_sort_into_elements_array
@@ -223,7 +228,8 @@ in
              elements : &array (a?, n) >> array (a, n))
       :<!wrt> void
 
-  (* Return a new array that is sorted. *)
+  (* Return a new array, of the sorted elements. Leave the original
+     *data* unaltered, although its *views* may be deleted. *)
   fn {a  : vt@ype}
      {tk : tkind}
   patience_sort_returning_elements_array
@@ -235,12 +241,8 @@ in
                 mfree_gc_v p |
                 ptr p)
 
-  overload patience_sort with
-    patience_sort_into_indices_array of 10
-  overload patience_sort with
-    patience_sort_into_elements_array of 0
-  overload patience_sort with
-    patience_sort_returning_elements_array of 0
+  overload patience_sort with patience_sort_into_elements_array
+  overload patience_sort with patience_sort_returning_elements_array
 
   (* -------------------------------------------------------------- *)
 

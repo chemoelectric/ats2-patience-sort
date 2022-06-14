@@ -1092,7 +1092,7 @@ end
 (* ---------------------------------------------------------------- *)
 
 implement {a} {tk}
-patience_sort_into_indices_array
+patience_sort_indices
           {n} (arr, n, indices) =
   let
     val zero : g1uint (tk, 0) = g1u2u 0u

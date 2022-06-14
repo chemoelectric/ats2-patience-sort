@@ -70,23 +70,23 @@ test1 () : void =
     var arr : array (int, ARRSZ)
     val () = array_initize_elt<int> (arr, i2sz ARRSZ, 0)
 
-    var sorted : array (index_t, ARRSZ)
-    val () = array_initize_elt<index_t> (sorted, i2sz ARRSZ, 0u)
+    var indices : array (index_t, ARRSZ)
+    val () = array_initize_elt<index_t> (indices, i2sz ARRSZ, 0u)
 
     prval @(arr_left, arr_right) =
       array_v_split {int} {..} {ARRSZ} {n} (view@ arr)
-    prval @(sorted_left, sorted_right) =
-      array_v_split {index_t} {..} {ARRSZ} {n} (view@ sorted)
+    prval @(indices_left, indices_right) =
+      array_v_split {index_t} {..} {ARRSZ} {n} (view@ indices)
 
     prval () = view@ arr := arr_left
-    prval () = view@ sorted := sorted_left
+    prval () = view@ indices := indices_left
 
     val () = array_copy_from_list<int> (!(addr@ arr), example_list)
-    val () = patience_sort<int> (arr, n, sorted)
+    val () = patience_sort_indices<int> (arr, n, indices)
 
     prval () = view@ arr := array_v_unsplit (view@ arr, arr_right)
-    prval () = view@ sorted :=
-      array_v_unsplit (view@ sorted, sorted_right)
+    prval () = view@ indices :=
+      array_v_unsplit (view@ indices, indices_right)
 
     var i : [i : nat | i <= n] uint i
     var p : List (int) = sorted_list
@@ -96,7 +96,7 @@ test1 () : void =
       let
         val () = assertloc (isneqz p)
       in
-        assertloc (arr[sorted[i]] = list_head p);
+        assertloc (arr[indices[i]] = list_head p);
         p := list_tail p
       end;
     assertloc (iseqz p)
