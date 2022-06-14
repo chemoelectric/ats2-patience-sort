@@ -51,6 +51,9 @@ local
 
 in
 
+  (* -------------------------------------------------------------- *)
+  (* The separate tasks of dealing and merging.                     *)
+
   fn {a  : vt@ype}
      {tk : tkind}
   patience_sort_deal_refparams
@@ -94,11 +97,11 @@ in
 
   fn {a  : vt@ype}
      {tk : tkind}
-  patience_sort_merge_refparams
+  patience_sort_merge_to_indices_refparams
             {n           : int}
             {num_piles   : pos | num_piles <= n}
             {power       : int | num_piles <= power}
-            {n_workspace : int | 4 * power <= n_workspace} (* FIXME: Reduce this size. Also don’t play "infinity" opponents. *)
+            {n_workspace : int | 4 * power <= n_workspace}
             (pf_exp2     : [exponent : nat] EXP2 (exponent, power) |
              arr         : &RD(array (a, n)),
              n           : g1uint (tk, n),
@@ -114,11 +117,11 @@ in
 
   fn {a  : vt@ype}
      {tk : tkind}
-  patience_sort_merge_valparams
+  patience_sort_merge_to_indices_valparams
             {n            : int}
             {num_piles    : pos | num_piles <= n}
             {power        : int | num_piles <= power}
-            {n_workspace  : int | 4 * power <= n_workspace} (* FIXME : Reduce this size. Also don’t play "infinity" opponents. *)
+            {n_workspace  : int | 4 * power <= n_workspace}
             {p_piles      : addr}
             {p_links      : addr}
             {p_workspace  : addr}
@@ -136,29 +139,94 @@ in
              p_piles      : ptr p_piles,
              p_links      : ptr p_links,
              p_workspace  : ptr p_workspace,
-             sorted       : &array (index_t (tk, n)?, n)
+             indices      : &array (index_t (tk, n)?, n)
                             >> array (index_t (tk, n), n))
       :<!wrt> void
 
-  overload patience_sort_merge with patience_sort_merge_refparams
-  overload patience_sort_merge with patience_sort_merge_valparams
-
-  (* Do both deal and merge. May use stack, malloc, or any
-     combination. *)
   fn {a  : vt@ype}
      {tk : tkind}
-  patience_sort_into_index_array
-            {n      : int}
-            (arr    : &RD(array (a, n)),
-             n      : g1uint (tk, n),
-             sorted : &array (index_t (tk, n)?, n)
-                      >> array (index_t (tk, n), n))
+  patience_sort_merge_to_elements_refparams
+            {n           : int}
+            {num_piles   : pos | num_piles <= n}
+            {power       : int | num_piles <= power}
+            {n_workspace : int | 4 * power <= n_workspace}
+            (pf_exp2     : [exponent : nat] EXP2 (exponent, power) |
+             arr         : &array (a, n) >> array (a?!, n),
+             n           : g1uint (tk, n),
+             num_piles   : g1uint (tk, num_piles),
+             power       : g1uint (tk, power),
+             piles       : &array (link_t (tk, n), n) >> _,
+             links       : &RD(array (link_t (tk, n), n)),
+             workspace   : &array (link_t (tk, n)?, n_workspace)
+                           >> _,
+             elements    : &array (a?, n) >> array (a, n))
+      :<!wrt> void
+
+  fn {a  : vt@ype}
+     {tk : tkind}
+  patience_sort_merge_to_elements_valparams
+            {n            : int}
+            {num_piles    : pos | num_piles <= n}
+            {power        : int | num_piles <= power}
+            {n_workspace  : int | 4 * power <= n_workspace}
+            {p_piles      : addr}
+            {p_links      : addr}
+            {p_workspace  : addr}
+            (pf_exp2      : [exponent : nat] EXP2 (exponent, power),
+             pf_piles     : !array_v (link_t (tk, n), p_piles, n)
+                            >> _,
+             pf_links     : !array_v (link_t (tk, n), p_links, n)
+                            >> _,
+             pf_workspace : !array_v (link_t (tk, n)?, p_workspace,
+                                      n_workspace) >> _ |
+             arr          : &array (a, n) >> array (a?!, n),
+             n            : g1uint (tk, n),
+             num_piles    : g1uint (tk, num_piles),
+             power        : g1uint (tk, power),
+             p_piles      : ptr p_piles,
+             p_links      : ptr p_links,
+             p_workspace  : ptr p_workspace,
+             elements     : &array (a?, n) >> array (a, n))
+      :<!wrt> void
+
+  overload patience_sort_merge_to_indices with
+    patience_sort_merge_to_indices_refparams
+  overload patience_sort_merge_to_indices with
+    patience_sort_merge_to_indices_valparams
+
+  overload patience_sort_merge_to_elements with
+    patience_sort_merge_to_elements_refparams of 0
+  overload patience_sort_merge_to_elements with
+    patience_sort_merge_to_elements_valparams of 0
+
+  (* -------------------------------------------------------------- *)
+  (* Doing both deal and merge, to perform a complete act of        *)
+  (* sorting. May use stack, malloc, or any combination for the     *)
+  (* intermediate work spaces.                                      *)
+
+  fn {a  : vt@ype}
+     {tk : tkind}
+  patience_sort_into_indices_array
+            {n       : int}
+            (arr     : &RD(array (a, n)),
+             n       : g1uint (tk, n),
+             indices : &array (index_t (tk, n)?, n)
+                        >> array (index_t (tk, n), n))
+      :<!wrt> void
+
+  fn {a  : vt@ype}
+     {tk : tkind}
+  patience_sort_into_elements_array
+            {n        : int}
+            (arr      : &array (a, n) >> array (a?!, n),
+             n        : g1uint (tk, n),
+             elements : &array (a?, n) >> array (a, n))
       :<!wrt> void
 
   (* Return a new array that is sorted. *)
   fn {a  : vt@ype}
      {tk : tkind}
-  patience_sort_returning_array
+  patience_sort_returning_elements_array
             {n   : int}
             (arr : &array (a, n) >> array (a?!, n),
              n   : g1uint (tk, n))
@@ -167,7 +235,13 @@ in
                 mfree_gc_v p |
                 ptr p)
 
-end
+  overload patience_sort with
+    patience_sort_into_indices_array of 10
+  overload patience_sort with
+    patience_sort_into_elements_array of 0
+  overload patience_sort with
+    patience_sort_returning_elements_array of 0
 
-overload patience_sort with patience_sort_into_index_array
-overload patience_sort with patience_sort_returning_array
+  (* -------------------------------------------------------------- *)
+
+end

@@ -1020,9 +1020,52 @@ patience_sort_merge_to_indices_valparams
   in
   end
 
+implement {a} {tk}
+patience_sort_merge_to_elements_refparams
+          (pf_exp2 |
+           arr, n, num_piles, power, piles, links,
+           workspace, elements) =
+  patience_sort_merge_to_elements_valparams<a><tk>
+    (pf_exp2, view@ piles, view@ links, view@ workspace |
+     arr, n, num_piles, power,
+     addr@ piles, addr@ links, addr@ workspace, elements)
+
+implement {a} {tk}
+patience_sort_merge_to_elements_valparams
+          {n} {num_piles} {power} {n_workspace}
+          {p_piles} {p_links} {p_workspace}
+          (pf_exp2, pf_piles, pf_links, pf_workspace |
+           arr, n, num_piles, power, p_piles, p_links,
+           p_workspace, elements) =
+  let
+    typedef index_t = index_t (tk, n)
+    typedef link_t = link_t (tk, n)
+
+    prval @(pf_winners, pf_rest) =
+      array_v_split {link_t?} {p_workspace} {n_workspace} {4 * power}
+                    pf_workspace
+
+    var indices : array (index_t, 0)
+
+    val p_winners = p_workspace
+    val () =
+      k_way_merge_valparams<a><tk>
+        (pf_exp2, pf_piles, pf_links, pf_winners |
+         arr, n, num_piles, power, p_piles, p_links, p_winners,
+         indices, g1u2u 0u, elements, n)
+
+    prval () = view@ indices :=
+      array_v_unnil_nil{index_t, index_t?} (view@ indices)
+
+    prval () = pf_workspace := array_v_unsplit (pf_winners, pf_rest)
+
+    prval () = $UN.castview2void_at{array (a?!, n)} (view@ arr)
+  in
+  end
+
 (* ================================================================ *)
-(* An interface that provides workspace. If the subarray to be      *)
-(* sorted is small enough, stack storage will be used.              *)
+(* Interfaces that provides workspace. If the subarray to be sorted *)
+(* is ‘small enough’, stack storage will be used.                   *)
 
 #define LEN_THRESHOLD   128
 #define PILES_SIZE      128
@@ -1046,9 +1089,11 @@ in
   prval pf_exp2_for_stack_storage = pf_exp2
 end
 
+(* ---------------------------------------------------------------- *)
+
 implement {a} {tk}
-patience_sort_into_index_array
-          {n} (arr, n, sorted) =
+patience_sort_into_indices_array
+          {n} (arr, n, indices) =
   let
     val zero : g1uint (tk, 0) = g1u2u 0u
     val two : g1uint (tk, 2) = g1u2u 2u
@@ -1100,18 +1145,18 @@ patience_sort_into_index_array
            p_piles      : ptr p_piles,
            p_links      : ptr p_links,
            p_workspace  : ptr p_workspace,
-           sorted       : &array (index_t?, n)
-                              >> array (index_t, n))
+           indices      : &array (index_t?, n)
+                            >> array (index_t, n))
         :<!wrt> void =
-      patience_sort_merge<a><tk>
+      patience_sort_merge_to_indices<a><tk>
         (pf_exp2, pf_piles, pf_links, pf_workspace |
          arr, n, num_piles, power, p_piles, p_links,
-         p_workspace, sorted)
+         p_workspace, indices)
   in
     if n = zero then
       let
-        prval () = view@ sorted :=
-          array_v_unnil_nil{index_t?, index_t} (view@ sorted)
+        prval () = view@ indices :=
+          array_v_unnil_nil{index_t?, index_t} (view@ indices)
       in
       end
     else if n <= g1i2u LEN_THRESHOLD then
@@ -1141,7 +1186,7 @@ patience_sort_into_index_array
         val () =
           merge (pf_exp2, pf_piles, pf_links, view@ workspace |
                  arr, n, num_piles, power,
-                 addr@ piles, addr@ links, addr@ workspace, sorted)
+                 addr@ piles, addr@ links, addr@ workspace, indices)
 
         prval () = array_v_uninitize_without_doing_anything pf_piles
         prval () = array_v_uninitize_without_doing_anything pf_links
@@ -1176,7 +1221,7 @@ patience_sort_into_index_array
           begin
             merge (pf_exp2, pf_piles, pf_links, pf_workspace |
                    arr, n, num_piles, power,
-                   p_piles, p_links, p_workspace, sorted);
+                   p_piles, p_links, p_workspace, indices);
 
             array_ptr_free (pf_piles, pfgc_piles | p_piles);
             array_ptr_free (pf_links, pfgc_links | p_links);
@@ -1192,7 +1237,7 @@ patience_sort_into_index_array
           in
             merge (pf_exp2, pf_piles, pf_links, pf_workspace |
                    arr, n, num_piles, power,
-                   p_piles, p_links, p_workspace, sorted);
+                   p_piles, p_links, p_workspace, indices);
 
             array_ptr_free (pf_piles, pfgc_piles | p_piles);
             array_ptr_free (pf_links, pfgc_links | p_links);
@@ -1202,108 +1247,185 @@ patience_sort_into_index_array
       end
   end
 
-(* ================================================================ *)
+(* ---------------------------------------------------------------- *)
 
 implement {a} {tk}
-patience_sort_returning_array {n} (arr, n) =
+patience_sort_into_elements_array {n} (arr, n, elements) =
   let
+    val zero : g1uint (tk, 0) = g1u2u 0u
+    val two : g1uint (tk, 2) = g1u2u 2u
+    val four : g1uint (tk, 4) = g1u2u 4u
 
-    (* FIXME: The intermediate ‘indices’ array is unnecessary. We
-              could either go straight to a destination array or
-              (because the results come out of the merge stage one at
-              a time, in order) write a generator. *)
+    prval () = lemma_g1uint_param n
+
+    typedef index_t = index_t (tk, n)
+    typedef link_t = link_t (tk, n)
+
+    fn
+    deal {n_workspace : int | 2 * n <= n_workspace}
+         {p_piles     : addr}
+         {p_links     : addr}
+         {p_workspace : addr}
+         (pf_piles    : !array_v (link_t?, p_piles, n)
+                        >> array_v (link_t, p_piles, n),
+          pf_links    : !array_v (link_t?, p_links, n)
+                        >> array_v (link_t, p_links, n),
+          pf_workspace : !array_v (link_t?, p_workspace,
+                                   n_workspace) >> _ |
+          n           : g1uint (tk, n),
+          arr         : &RD(array (a, n)),
+          p_piles     : ptr p_piles,
+          p_links     : ptr p_links,
+          p_workspace : ptr p_workspace)
+        :<!wrt> [num_piles : int | num_piles <= n]
+                g1uint (tk, num_piles) =
+      patience_sort_deal<a><tk>
+        (pf_piles, pf_links, pf_workspace |
+         arr, n, p_piles, p_links, p_workspace)
+
+    fn
+    merge {num_piles    : pos | num_piles <= n}
+          {power        : int | num_piles <= power}
+          {n_workspace  : int | 4 * power <= n_workspace}
+          {p_piles      : addr}
+          {p_links      : addr}
+          {p_workspace  : addr}
+          (pf_exp2      : [exponent : nat] EXP2 (exponent, power),
+           pf_piles     : !array_v (link_t, p_piles, n) >> _,
+           pf_links     : !array_v (link_t, p_links, n) >> _,
+           pf_workspace : !array_v (link_t?, p_workspace,
+                                    n_workspace) >> _ |
+           arr          : &array (a, n) >> array (a?!, n),
+           n            : g1uint (tk, n),
+           num_piles    : g1uint (tk, num_piles),
+           power        : g1uint (tk, power),
+           p_piles      : ptr p_piles,
+           p_links      : ptr p_links,
+           p_workspace  : ptr p_workspace,
+           elements     : &array (a?, n) >> array (a, n))
+        :<!wrt> void =
+      patience_sort_merge_to_elements<a><tk>
+        (pf_exp2, pf_piles, pf_links, pf_workspace |
+         arr, n, num_piles, power, p_piles, p_links,
+         p_workspace, elements)
+  in
+    if n = zero then
+      let
+        prval () = view@ elements :=
+          array_v_unnil_nil{a?, a} (view@ elements)
+        prval () = $UN.castview2void_at{array (a?!, n)} (view@ arr)
+      in
+      end
+    else if n <= g1i2u LEN_THRESHOLD then
+      (* Use stack storage. *)
+      let
+        var piles : array (link_t, PILES_SIZE)
+        var links : array (link_t, LINKS_SIZE)
+        var workspace : array (link_t, WORKSPACE_SIZE)
+
+        prval @(pf_piles, pf_piles_rest) =
+          array_v_split {link_t?} {..} {PILES_SIZE} {n}
+                        (view@ piles)
+        prval @(pf_links, pf_links_rest) =
+          array_v_split {link_t?} {..} {LINKS_SIZE} {n}
+                        (view@ links)
+
+        val num_piles =
+          deal (pf_piles, pf_links, view@ workspace |
+                n, arr, addr@ piles, addr@ links, addr@ workspace)
+
+        prval () = lemma_g1uint_param num_piles
+        val () = $effmask_exn assertloc (num_piles <> zero)
+
+        prval pf_exp2 = pf_exp2_for_stack_storage
+        val power = g1i2u LEN_THRESHOLD
+
+        val () =
+          merge (pf_exp2, pf_piles, pf_links, view@ workspace |
+                 arr, n, num_piles, power,
+                 addr@ piles, addr@ links, addr@ workspace, elements)
+
+        prval () = array_v_uninitize_without_doing_anything pf_piles
+        prval () = array_v_uninitize_without_doing_anything pf_links
+
+        prval () = view@ piles :=
+          array_v_unsplit (pf_piles, pf_piles_rest)
+        prval () = view@ links :=
+          array_v_unsplit (pf_links, pf_links_rest)
+      in
+      end
+    else
+      (* Use malloc storage. *)
+      let
+        val @(pf_piles, pfgc_piles | p_piles) =
+          array_ptr_alloc<link_t> (g1u2u n)
+        val @(pf_links, pfgc_links | p_links) =
+          array_ptr_alloc<link_t> (g1u2u n)
+
+        val @(pf_workspace, pfgc_workspace | p_workspace) =
+          array_ptr_alloc<link_t> (g1u2u (two * n))
+
+        val num_piles =
+          deal (pf_piles, pf_links, pf_workspace |
+                n, arr, p_piles, p_links, p_workspace)
+
+        prval () = lemma_g1uint_param num_piles
+        val () = $effmask_exn assertloc (num_piles <> zero)
+
+        val @(pf_exp2 | power) = next_power_of_two<tk> num_piles
+      in
+        if four * power <= two * g1u2u n then
+          begin
+            merge (pf_exp2, pf_piles, pf_links, pf_workspace |
+                   arr, n, num_piles, power,
+                   p_piles, p_links, p_workspace, elements);
+
+            array_ptr_free (pf_piles, pfgc_piles | p_piles);
+            array_ptr_free (pf_links, pfgc_links | p_links);
+            array_ptr_free (pf_workspace, pfgc_workspace |
+                            p_workspace)
+          end
+        else
+          let
+            val () = array_ptr_free (pf_workspace, pfgc_workspace |
+                                     p_workspace)
+            val @(pf_workspace, pfgc_workspace | p_workspace) =
+              array_ptr_alloc<link_t> (g1u2u (four * power))
+          in
+            merge (pf_exp2, pf_piles, pf_links, pf_workspace |
+                   arr, n, num_piles, power,
+                   p_piles, p_links, p_workspace, elements);
+
+            array_ptr_free (pf_piles, pfgc_piles | p_piles);
+            array_ptr_free (pf_links, pfgc_links | p_links);
+            array_ptr_free (pf_workspace, pfgc_workspace |
+                            p_workspace)
+          end
+      end
+  end
+
+(* ---------------------------------------------------------------- *)
+
+implement {a} {tk}
+patience_sort_returning_elements_array {n} (arr, n) =
+  let
 
     prval () = lemma_array_param arr
     prval () = prop_verify {0 <= n} ()
 
-    typedef index_t = index_t (tk, n)
-
     fn
-    sort (arr     : &RD(array (a, n)),
-          indices : &array (index_t?, n) >> array (index_t, n))
+    sort (arr      : &array (a, n) >> array (a?!, n),
+          elements : &array (a?, n) >> array (a, n))
         :<!wrt> void =
-      patience_sort<a><tk> (arr, n, indices)
-
-    fn
-    make_sorted_array (arr     : &array (a, n) >> array (a?!, n),
-                       indices : &RD(array (index_t, n)))
-        :<!wrt> [p : addr]
-                @(array_v (a, p, n),
-                  mfree_gc_v p |
-                  ptr p) =
-      let
-        fun
-        loop {i : nat | i <= n}
-             {p : addr}
-             {q : addr}
-             .<i>.
-             (pf_sarr : !array_v (a?, p, i) >> array_v (a, p, i),
-              pf_arr  : !array_v (a, q, n) |
-              p_arr   : ptr q,
-              indices : &RD(array (index_t, n)),
-              p_sarr  : ptr p,
-              i       : g1uint (tk, i))
-            :<!wrt> void =
-          if i = g1u2u 0u then
-            let
-              prval () = pf_sarr := array_v_unnil_nil{a?, a} pf_sarr
-            in
-            end
-          else
-            let
-              prval @(pf_sarr1, pf_elem) = array_v_unextend pf_sarr
-
-              val i1 = pred i
-
-              val elem : a =
-                $UN.ptr0_get<a> (ptr_add<a> (p_arr, indices[i1]))
-              val () =
-                ptr_set<a> (pf_elem | ptr_add<a> (p_sarr, i1), elem)
-
-              val () =
-                loop (pf_sarr1, pf_arr | p_arr, indices, p_sarr, i1)
-
-              prval () = pf_sarr := array_v_extend (pf_sarr1, pf_elem)
-            in
-            end
-
-        val @(pf_sarr, pfgc_sarr | p_sarr) =
-          array_ptr_alloc<a> (g1u2u n)
-        val () =
-          loop (pf_sarr, view@ arr | addr@ arr, indices, p_sarr, n)
-        prval () = $UN.castview2void_at{array (a?!, n)} (view@ arr)
-      in
-        @(pf_sarr, pfgc_sarr | p_sarr)
-      end
+      patience_sort_into_elements_array<a><tk> (arr, n, elements)
   in
-    if n <= g1i2u LEN_THRESHOLD then
-      let
-        var indices : array (index_t, LEN_THRESHOLD)
-        prval @(pf_indices, pf_rest) =
-          array_v_split {index_t?} {..} {LEN_THRESHOLD} {n}
-                        (view@ indices)
-        prval () = view@ indices := pf_indices
-        val () = sort (arr, indices)
-        val sarr = make_sorted_array (arr, indices)
-        prval () =
-          array_v_uninitize_without_doing_anything (view@ indices)
-        prval () = view@ indices :=
-          array_v_unsplit (view@ indices, pf_rest)
-      in
-        sarr
-      end
-    else
-      let
-        val @(pf_indices, pfgc_indices | p_indices) =
-          array_ptr_alloc<index_t> (g1u2u n)
-        macdef indices = !p_indices
-        val () = sort (arr, indices)
-        val sarr = make_sorted_array (arr, indices)
-        val () = array_ptr_free (pf_indices, pfgc_indices |
-                                 p_indices)
-      in
-        sarr
-      end
+    let
+      val retval = array_ptr_alloc<a> (g1u2u n)
+      macdef elements = !(retval.2)
+      val () = sort (arr, elements)
+    in
+      retval
+    end
   end
 
 (* ================================================================ *)
