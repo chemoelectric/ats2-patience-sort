@@ -155,17 +155,23 @@ lib_LTLIBRARIES += libats2-patience-sort.la
 
 PATIENCE_SORT_SATS = patience-sort/SATS/patience-sort.sats
 PATIENCE_SORT_SATS_C = patience-sort/SATS/patience-sort_sats.c
-EXTRA_DIST += $(PATIENCE_SORT_SATS)
 CLEANFILES += $(PATIENCE_SORT_SATS_C)
 
-PATIENCE_SORT_DATS = patience-sort/DATS/patience-sort.sats
+PATIENCE_SORT_DATS = patience-sort/DATS/patience-sort.dats
 PATIENCE_SORT_DATS_C = patience-sort/DATS/patience-sort_dats.c
-EXTRA_DIST += $(PATIENCE_SORT_DATS)
 CLEANFILES += $(PATIENCE_SORT_DATS_C)
+
+PATIENCE_SORT_HATS = patience-sort/HATS/patience-sort.hats
+
+nobase_dist_pkginclude_HEADERS =
+nobase_dist_pkginclude_HEADERS += $(PATIENCE_SORT_SATS)
+nobase_dist_pkginclude_HEADERS += $(PATIENCE_SORT_DATS)
+nobase_dist_pkginclude_HEADERS += $(PATIENCE_SORT_HATS)
 
 nodist_libats2_patience_sort_la_SOURCES =
 nodist_libats2_patience_sort_la_SOURCES += $(PATIENCE_SORT_SATS_C)
 nodist_libats2_patience_sort_la_SOURCES += $(PATIENCE_SORT_DATS_C)
+
 
 #--------------------------------------------------------------------------
 
@@ -180,6 +186,7 @@ tests_try_int_sort_SOURCES += tests/try-int-sort_tests.c
 tests_try_int_sort_DEPENDENCIES =
 tests_try_int_sort_DEPENDENCIES += tests/try-int-sort.dats
 tests_try_int_sort_DEPENDENCIES += libats2-patience-sort.la
+tests_try_int_sort_DEPENDENCIES += $(PATIENCE_SORT_HATS)
 tests_try_int_sort_CPPFLAGS =
 tests_try_int_sort_CPPFLAGS += $(AM_CPPFLAGS)
 tests_try_int_sort_CPPFLAGS += -DATS_MEMALLOC_LIBC

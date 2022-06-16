@@ -134,14 +134,16 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ax_ac_append_to_file.m4 \
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 DIST_COMMON = $(srcdir)/Makefile.am $(top_srcdir)/configure \
-	$(am__configure_deps) $(am__DIST_COMMON)
+	$(am__configure_deps) $(nobase_dist_pkginclude_HEADERS) \
+	$(am__DIST_COMMON)
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
 CONFIG_CLEAN_FILES = ats2-patience-sort.pc list-ats-dependencies.dats
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(libdir)" \
-	"$(DESTDIR)$(pkgconfigdir)" "$(DESTDIR)$(pkgincludedir)"
+	"$(DESTDIR)$(pkgconfigdir)" "$(DESTDIR)$(pkgincludedir)" \
+	"$(DESTDIR)$(pkgincludedir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -237,7 +239,8 @@ am__can_run_installinfo = \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
 DATA = $(nodist_pkgconfig_DATA)
-HEADERS = $(nobase_nodist_pkginclude_HEADERS)
+HEADERS = $(nobase_dist_pkginclude_HEADERS) \
+	$(nobase_nodist_pkginclude_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
 # and print each of them once, without duplicates.  Input order is
@@ -631,7 +634,6 @@ AUTOMAKE_OPTIONS = foreign subdir-objects -Wno-portability
 @CODE_COVERAGE_ENABLED_TRUE@code_coverage_sanitize = $(subst -,_,$(subst .,_,$(1)))
 @CODE_COVERAGE_ENABLED_TRUE@AM_DISTCHECK_CONFIGURE_FLAGS := $(AM_DISTCHECK_CONFIGURE_FLAGS) --disable-code-coverage
 EXTRA_DIST = $(srcdir)/silent-rules.mk COPYING INSTALL README AUTHORS \
-	$(PATIENCE_SORT_SATS) $(PATIENCE_SORT_DATS) \
 	tests/try-int-sort.dats list-ats-dependencies.dats
 MOSTLYCLEANFILES = 
 CLEANFILES = $(PATIENCE_SORT_SATS_C) $(PATIENCE_SORT_DATS_C) \
@@ -676,13 +678,16 @@ TOTAL_PATSOPTFLAGS = $(AM_PATSOPTFLAGS) $(PATSOPTFLAGS) \
 TESTS_PATSOPTFLAGS = -IATS $(builddir)/tests -IATS $(srcdir)/tests
 PATIENCE_SORT_SATS = patience-sort/SATS/patience-sort.sats
 PATIENCE_SORT_SATS_C = patience-sort/SATS/patience-sort_sats.c
-PATIENCE_SORT_DATS = patience-sort/DATS/patience-sort.sats
+PATIENCE_SORT_DATS = patience-sort/DATS/patience-sort.dats
 PATIENCE_SORT_DATS_C = patience-sort/DATS/patience-sort_dats.c
+PATIENCE_SORT_HATS = patience-sort/HATS/patience-sort.hats
+nobase_dist_pkginclude_HEADERS = $(PATIENCE_SORT_SATS) \
+	$(PATIENCE_SORT_DATS) $(PATIENCE_SORT_HATS)
 nodist_libats2_patience_sort_la_SOURCES = $(PATIENCE_SORT_SATS_C) \
 	$(PATIENCE_SORT_DATS_C)
 tests_try_int_sort_SOURCES = tests/try-int-sort_tests.c
 tests_try_int_sort_DEPENDENCIES = tests/try-int-sort.dats \
-	libats2-patience-sort.la
+	libats2-patience-sort.la $(PATIENCE_SORT_HATS)
 tests_try_int_sort_CPPFLAGS = $(AM_CPPFLAGS) -DATS_MEMALLOC_LIBC
 tests_try_int_sort_LDADD = libats2-patience-sort.la
 nodist_list_ats_dependencies_SOURCES =  \
@@ -962,6 +967,30 @@ uninstall-nodist_pkgconfigDATA:
 	@list='$(nodist_pkgconfig_DATA)'; test -n "$(pkgconfigdir)" || list=; \
 	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
 	dir='$(DESTDIR)$(pkgconfigdir)'; $(am__uninstall_files_from_dir)
+install-nobase_dist_pkgincludeHEADERS: $(nobase_dist_pkginclude_HEADERS)
+	@$(NORMAL_INSTALL)
+	@list='$(nobase_dist_pkginclude_HEADERS)'; test -n "$(pkgincludedir)" || list=; \
+	if test -n "$$list"; then \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(pkgincludedir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(pkgincludedir)" || exit 1; \
+	fi; \
+	$(am__nobase_list) | while read dir files; do \
+	  xfiles=; for file in $$files; do \
+	    if test -f "$$file"; then xfiles="$$xfiles $$file"; \
+	    else xfiles="$$xfiles $(srcdir)/$$file"; fi; done; \
+	  test -z "$$xfiles" || { \
+	    test "x$$dir" = x. || { \
+	      echo " $(MKDIR_P) '$(DESTDIR)$(pkgincludedir)/$$dir'"; \
+	      $(MKDIR_P) "$(DESTDIR)$(pkgincludedir)/$$dir"; }; \
+	    echo " $(INSTALL_HEADER) $$xfiles '$(DESTDIR)$(pkgincludedir)/$$dir'"; \
+	    $(INSTALL_HEADER) $$xfiles "$(DESTDIR)$(pkgincludedir)/$$dir" || exit $$?; }; \
+	done
+
+uninstall-nobase_dist_pkgincludeHEADERS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(nobase_dist_pkginclude_HEADERS)'; test -n "$(pkgincludedir)" || list=; \
+	$(am__nobase_strip_setup); files=`$(am__nobase_strip)`; \
+	dir='$(DESTDIR)$(pkgincludedir)'; $(am__uninstall_files_from_dir)
 install-nobase_nodist_pkgincludeHEADERS: $(nobase_nodist_pkginclude_HEADERS)
 	@$(NORMAL_INSTALL)
 	@list='$(nobase_nodist_pkginclude_HEADERS)'; test -n "$(pkgincludedir)" || list=; \
@@ -1390,7 +1419,7 @@ install-EXTRAPROGRAMS: install-libLTLIBRARIES
 install-binPROGRAMS: install-libLTLIBRARIES
 
 installdirs:
-	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pkgconfigdir)" "$(DESTDIR)$(pkgincludedir)"; do \
+	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pkgconfigdir)" "$(DESTDIR)$(pkgincludedir)" "$(DESTDIR)$(pkgincludedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: $(BUILT_SOURCES)
@@ -1465,7 +1494,8 @@ info: info-am
 
 info-am:
 
-install-data-am: install-nobase_nodist_pkgincludeHEADERS \
+install-data-am: install-nobase_dist_pkgincludeHEADERS \
+	install-nobase_nodist_pkgincludeHEADERS \
 	install-nodist_pkgconfigDATA
 
 install-dvi: install-dvi-am
@@ -1518,6 +1548,7 @@ ps: ps-am
 ps-am:
 
 uninstall-am: uninstall-binPROGRAMS uninstall-libLTLIBRARIES \
+	uninstall-nobase_dist_pkgincludeHEADERS \
 	uninstall-nobase_nodist_pkgincludeHEADERS \
 	uninstall-nodist_pkgconfigDATA
 
@@ -1537,6 +1568,7 @@ uninstall-am: uninstall-binPROGRAMS uninstall-libLTLIBRARIES \
 	install-dvi-am install-exec install-exec-am install-html \
 	install-html-am install-info install-info-am \
 	install-libLTLIBRARIES install-man \
+	install-nobase_dist_pkgincludeHEADERS \
 	install-nobase_nodist_pkgincludeHEADERS \
 	install-nodist_pkgconfigDATA install-pdf install-pdf-am \
 	install-ps install-ps-am install-strip installcheck \
@@ -1545,6 +1577,7 @@ uninstall-am: uninstall-binPROGRAMS uninstall-libLTLIBRARIES \
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	recheck tags tags-am uninstall uninstall-am \
 	uninstall-binPROGRAMS uninstall-libLTLIBRARIES \
+	uninstall-nobase_dist_pkgincludeHEADERS \
 	uninstall-nobase_nodist_pkgincludeHEADERS \
 	uninstall-nodist_pkgconfigDATA
 

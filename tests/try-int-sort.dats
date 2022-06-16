@@ -17,10 +17,7 @@
 *)
 
 #include "share/atspre_staload.hats"
-
-staload "patience-sort/SATS/patience-sort.sats"
-staload _ = "patience-sort/DATS/patience-sort.dats"
-
+#include "patience-sort/HATS/patience-sort.hats"
 staload UN = "prelude/SATS/unsafe.sats"
 
 (*------------------------------------------------------------------*)
