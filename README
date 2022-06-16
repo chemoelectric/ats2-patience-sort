@@ -1,10 +1,6 @@
 Patience Sort for ATS/Postiats
 ------------------------------
 
-This is a work in progress. Initially, it will simply be my Rosetta
-Code contribution on the matter. That implementation, however, uses
-too much workspace.
-
 ‘Patience sort’ is an old method of sorting, inspired by the solitaire
 card game Klondike (which sorts the cards face-up as you play it). You
 ‘deal’ the data into Klondike-like sorted piles, and then do a k-way
@@ -15,8 +11,8 @@ implementation, followed by my migration of that implementation to
 other languages (including at least Ada, Mercury, Modula-2, Pascal,
 and ATS).
 
-Patience sort with a binary search for the dealing phase and a fast
-k-way merge for the merge stage performs at order n log n in the
+Patience sort (with a binary search for the dealing phase and a fast
+k-way merge for the merge stage) performs at order n log n in the
 average and worst cases, and at order n in the best case. On paper, it
 is certainly one of the best choices for a non-parallel sorting
 algorithm. Is it also a good choice, in *practice*?
@@ -36,3 +32,7 @@ Here I am not trying to make the world’s fastest sort, but one fast
 enough that a person could feel confident using it for day-to-day
 programming, particularly in situations where one would not hesitate
 to use any other decent sort, including a Shell sort.
+
+Nevertheless, you might find it to be pretty fast. This comes at the
+expense of space: I use a fair bit of workspace, and what I allocate I
+do not use efficiently.
