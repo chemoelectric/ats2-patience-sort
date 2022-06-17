@@ -745,7 +745,7 @@ k_way_merge_refparams
                 if winner_i = link_nil then
                   ()     (* Leave the loop immediately, if there is no
                             competitor. *)
-                else          
+                else
                   let
                     val j = find_opponent i
                     val winner_j = winners[VALUE, j]
