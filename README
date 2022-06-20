@@ -1,5 +1,14 @@
-Patience Sort for ATS/Postiats
-------------------------------
+Quasi-Stable Patience Sort for ATS/Postiats
+-------------------------------------------
+
+I call this implementation ‘quasi-stable’ because stability of the
+result depends on determining whether two elements are equal and then
+comparing their original indices. This is little extra computation if
+your compar procedure is one that tests for equality, but if your
+compar procedure is really just a less-than predicate then the sort
+will be unstable. In what I am calling a ‘true’ stable sort--for
+instance, a stable mergesort--stability arises without any extra
+computation whatsoever.
 
 ‘Patience sort’ is an old method of sorting, inspired by the solitaire
 card game Klondike (which sorts the cards face-up as you play it). You
@@ -11,28 +20,8 @@ implementation, followed by my migration of that implementation to
 other languages (including at least Ada, Mercury, Modula-2, Pascal,
 and ATS).
 
-Patience sort (with a binary search for the dealing phase and a fast
-k-way merge for the merge stage) performs at order n log n in the
-average and worst cases, and at order n in the best case. On paper, it
-is certainly one of the best choices for a non-parallel sorting
-algorithm. Is it also a good choice, in *practice*?
+I think this sort is pretty fast, but it does use a fair bit of
+temporary storage (for integer arrays). So keep that in mind.
 
-I know some folk at Microsoft Research did an implementation of
-patience sort that they profiled as a bit faster than a good quicksort
-to which they compared it. I haven’t really read their ACM conference
-paper yet. I did see their paper first compares a quicksort to a
-patience sort and the patience sort is an order of magnitude slower,
-but this is no doubt for a patience sort employing linked lists,
-etc. So *that* comparison is meaningless, in my opinion. One should
-compare serious implementations to serious implementations, not toy
-implementations to serious implementations. Doing the latter gives no
-insight.
-
-Here I am not trying to make the world’s fastest sort, but one fast
-enough that a person could feel confident using it for day-to-day
-programming, particularly in situations where one would not hesitate
-to use any other decent sort, including a Shell sort.
-
-Nevertheless, you might find it to be pretty fast. This comes at the
-expense of space: I use a fair bit of workspace, and what I allocate I
-do not use efficiently.
+It should perform O(n log n) in the worst case and O(n) in the best
+case.

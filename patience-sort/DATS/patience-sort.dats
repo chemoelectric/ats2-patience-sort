@@ -73,6 +73,10 @@ typedef link_t (tk : tkind, n : int, i : int) =
 typedef link_t (tk : tkind, n : int) =
   patience_sort_link_t (tk, n)
 
+implement {a}
+patience_sort$cmp (x, y) =
+  if patience_sort$lt<a> (x, y) then ~1 else 1
+
 (* ================================================================ *)
 (*
 
@@ -160,7 +164,7 @@ find_pile {n         : int}
     g1u2u 1u
   else
     let
-      macdef lt = patience_sort$lt<a>
+      macdef compare = patience_sort$cmp<a>
 
       fun
       loop {j, k  : nat | j <= k; k < num_piles}
@@ -191,13 +195,12 @@ find_pile {n         : int}
                   array_v_takeout_two
                     {a} {..} {n} {i1, i2} (view@ arr)
 
-                val x2_lt_x1 =
-                  (!(ptr_add<a> (addr@ arr, i2)))
-                    \lt (!(ptr_add<a> (addr@ arr, i1)))
+                val cmp = compare (!(ptr_add<a> (addr@ arr, i2)),
+                                   !(ptr_add<a> (addr@ arr, i1)))
 
                 prval () = view@ arr := fpf (pfelem1, pfelem2)
               in
-                if x2_lt_x1 then
+                if cmp < 0 || (cmp = 0 && i2 < i1) then
                   succ num_piles
                 else
                   num_piles
@@ -224,13 +227,12 @@ find_pile {n         : int}
             prval @(pfelem1, pfelem2, fpf) =
               array_v_takeout_two {a} {..} {n} {i1, i2} (view@ arr)
 
-            val x2_lt_x1 =
-              (!(ptr_add<a> (addr@ arr, i2)))
-                \lt (!(ptr_add<a> (addr@ arr, i1)))
+            val cmp = compare (!(ptr_add<a> (addr@ arr, i2)),
+                               !(ptr_add<a> (addr@ arr, i1)))
 
             prval () = view@ arr := fpf (pfelem1, pfelem2)
           in
-            if x2_lt_x1 then
+            if cmp < 0 || (cmp = 0 && i2 < i1) then
               loop (arr, piles, succ i, k)
             else
               loop (arr, piles, j, i)
@@ -270,7 +272,7 @@ find_last_elem
     g1u2u 1u
   else
     let
-      macdef lt = patience_sort$lt<a>
+      macdef compare = patience_sort$cmp<a>
 
       fun
       loop {j, k       : nat | j <= k; k < num_piles}
@@ -306,13 +308,12 @@ find_last_elem
                   array_v_takeout_two
                     {a} {..} {n} {i1, i2} (view@ arr)
 
-                val x1_lt_x2 =
-                  (!(ptr_add<a> (addr@ arr, i1)))
-                    \lt (!(ptr_add<a> (addr@ arr, i2)))
+                val cmp = compare (!(ptr_add<a> (addr@ arr, i1)),
+                                   !(ptr_add<a> (addr@ arr, i2)))
 
                 prval () = view@ arr := fpf (pfelem1, pfelem2)
               in
-                if x1_lt_x2 then
+                if cmp < 0 || (cmp = 0 && i1 < i2) then
                   succ num_piles
                 else
                   g1u2u 1u
@@ -343,13 +344,12 @@ find_last_elem
             prval @(pfelem1, pfelem2, fpf) =
               array_v_takeout_two {a} {..} {n} {i1, i2} (view@ arr)
 
-            val x1_lt_x2 =
-              (!(ptr_add<a> (addr@ arr, i1)))
-                \lt (!(ptr_add<a> (addr@ arr, i2)))
+            val cmp = compare (!(ptr_add<a> (addr@ arr, i1)),
+                               !(ptr_add<a> (addr@ arr, i2)))
 
             prval () = view@ arr := fpf (pfelem1, pfelem2)
           in
-            if x1_lt_x2 then
+            if cmp < 0 || (cmp = 0 && i1 < i2) then
               loop (arr, last_elems, succ i, k)
             else
               loop (arr, last_elems, j, i)
@@ -689,7 +689,7 @@ k_way_merge_refparams
         :<> [iwinner : pos | iwinner <= total_nodes]
             g1uint (tk, iwinner) =
       let
-        macdef lt = patience_sort$lt<a>
+        macdef compare = patience_sort$cmp<a>
       in
         if winner_i = link_nil then
           j
@@ -709,13 +709,12 @@ k_way_merge_refparams
             prval @(pfelem1, pfelem2, fpf) =
               array_v_takeout_two {a} {..} {n} {i1, i2} (view@ arr)
 
-            val x2_lt_x1 =
-              (!(ptr_add<a> (addr@ arr, i2)))
-                \lt (!(ptr_add<a> (addr@ arr, i1)))
+            val cmp = compare (!(ptr_add<a> (addr@ arr, i2)),
+                               !(ptr_add<a> (addr@ arr, i1)))
 
             prval () = view@ arr := fpf (pfelem1, pfelem2)
           in
-            if x2_lt_x1 then j else i
+            if cmp < 0 || (cmp = 0 && i2 < i1) then j else i
           end
       end
 

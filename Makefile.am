@@ -177,6 +177,7 @@ nodist_libats2_patience_sort_la_SOURCES += $(PATIENCE_SORT_DATS_C)
 
 TESTS =
 TESTS += tests/try-int-sort
+TESTS += tests/try-stable-sort
 
 EXTRA_PROGRAMS += tests/try-int-sort
 CLEANFILES += tests/try-int-sort
@@ -194,6 +195,23 @@ tests_try_int_sort_LDADD =
 tests_try_int_sort_LDADD += libats2-patience-sort.la
 EXTRA_DIST += tests/try-int-sort.dats
 tests/try-int-sort_tests.c: tests/try-int-sort.dats
+
+EXTRA_PROGRAMS += tests/try-stable-sort
+CLEANFILES += tests/try-stable-sort
+CLEANFILES += tests/try-stable-sort_tests.c
+tests_try_stable_sort_SOURCES =
+tests_try_stable_sort_SOURCES += tests/try-stable-sort_tests.c
+tests_try_stable_sort_DEPENDENCIES =
+tests_try_stable_sort_DEPENDENCIES += tests/try-stable-sort.dats
+tests_try_stable_sort_DEPENDENCIES += libats2-patience-sort.la
+tests_try_stable_sort_DEPENDENCIES += $(PATIENCE_SORT_HATS)
+tests_try_stable_sort_CPPFLAGS =
+tests_try_stable_sort_CPPFLAGS += $(AM_CPPFLAGS)
+tests_try_stable_sort_CPPFLAGS += -DATS_MEMALLOC_LIBC
+tests_try_stable_sort_LDADD =
+tests_try_stable_sort_LDADD += libats2-patience-sort.la
+EXTRA_DIST += tests/try-stable-sort.dats
+tests/try-stable-sort_tests.c: tests/try-stable-sort.dats
 
 tests-clean:
 	-rm -f tests/*.$(OBJEXT)
