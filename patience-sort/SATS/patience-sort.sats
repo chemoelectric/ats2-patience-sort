@@ -38,12 +38,19 @@ typedef patience_sort_link_t (tk : tkind, n : int) =
   [i : int]
   patience_sort_link_t (tk, n, i)
 
-(* patience_sort$cmp : a strcmp-like function for patience sort. *)
+(* patience_sort$cmp : a strcmp-like function for patience sort. If
+                       you want a stable sort, you must use this
+                       instead of patience_sort$lt. (I call this kind
+                       of sort ‘quasi-stable’, because the stability
+                       is not a built-in property of the sorting
+                       algorithm.) *)
 fn {a : vt@ype}
 patience_sort$cmp (x : &RD(a), y : &RD(a)) :<> int
 
 (* patience_sort$lt : an order predicate for patience sort. An
-   implementation of patience_sort$cmp takes precedence over this. *)
+                      implementation of patience_sort$cmp takes
+                      precedence over an implementation of
+                      patience_sort$lt. *)
 fn {a : vt@ype}
 patience_sort$lt (x : &RD(a), y : &RD(a)) :<> bool
 
