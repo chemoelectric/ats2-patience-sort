@@ -4,11 +4,12 @@ Quasi-Stable Patience Sort for ATS/Postiats
 I call this implementation ‘quasi-stable’ because stability of the
 result depends on determining whether two elements are equal and then
 comparing their original indices. This is little extra computation if
-your compar procedure is one that tests for equality, but if your
-compar procedure is really just a less-than predicate then the sort
-will be unstable. In what I am calling a ‘true’ stable sort--for
-instance, a stable mergesort--stability arises without any extra
-computation whatsoever.
+your patience_sort$cmp procedure is one that tests for equality, but
+if your patience_sort$cmp procedure is really just a less-than
+predicate (or if you use patience_sort$lt instead) then the sort will
+be unstable. In what I am calling a ‘true’ stable sort--for instance,
+a stable mergesort--stability arises without any extra computation
+whatsoever.
 
 ‘Patience sort’ is an old method of sorting, inspired by the solitaire
 card game Klondike (which sorts the cards face-up as you play it). You
