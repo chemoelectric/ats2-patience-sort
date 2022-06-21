@@ -22,7 +22,7 @@ other languages (including at least Ada, Mercury, Modula-2, Pascal,
 and ATS).
 
 I think this sort is pretty fast, but it does use a fair bit of
-temporary storage (for integer arrays). So keep that in mind.
+temporary storage (as integer arrays). So keep that in mind.
 
 It should perform O(n log n) in the worst case and O(n) in the best
 case.
