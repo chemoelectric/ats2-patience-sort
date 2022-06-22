@@ -200,7 +200,7 @@ find_pile {n         : int}
 
                 prval () = view@ arr := fpf (pfelem1, pfelem2)
               in
-                if cmp < 0 || (cmp = 0 && i2 < i1) then
+                if (cmp < 0) + ((cmp = 0) * (i2 < i1)) then
                   succ num_piles
                 else
                   num_piles
@@ -232,7 +232,7 @@ find_pile {n         : int}
 
             prval () = view@ arr := fpf (pfelem1, pfelem2)
           in
-            if cmp < 0 || (cmp = 0 && i2 < i1) then
+            if (cmp < 0) + ((cmp = 0) * (i2 < i1)) then
               loop (arr, piles, succ i, k)
             else
               loop (arr, piles, j, i)
@@ -313,7 +313,7 @@ find_last_elem
 
                 prval () = view@ arr := fpf (pfelem1, pfelem2)
               in
-                if cmp < 0 || (cmp = 0 && i1 < i2) then
+                if (cmp < 0) + ((cmp = 0) * (i1 < i2)) then
                   succ num_piles
                 else
                   g1u2u 1u
@@ -349,7 +349,7 @@ find_last_elem
 
             prval () = view@ arr := fpf (pfelem1, pfelem2)
           in
-            if cmp < 0 || (cmp = 0 && i1 < i2) then
+            if (cmp < 0) + ((cmp = 0) * (i1 < i2)) then
               loop (arr, last_elems, succ i, k)
             else
               loop (arr, last_elems, j, i)
@@ -714,7 +714,7 @@ k_way_merge_refparams
 
             prval () = view@ arr := fpf (pfelem1, pfelem2)
           in
-            if cmp < 0 || (cmp = 0 && i2 < i1) then j else i
+            if (cmp < 0) + ((cmp = 0) * (i2 < i1)) then j else i
           end
       end
 
